@@ -1,4 +1,4 @@
-# grafana_energymanager.yaml v2.0.0
+# grafana_energymanager.yaml v1.3.0
 title: Grafana
 views:
   - title: Energy Manager

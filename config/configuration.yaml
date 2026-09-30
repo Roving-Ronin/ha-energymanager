@@ -1,5 +1,5 @@
 # Energy Manager Configuration File
-# === ENERGY_MANAGER_CORE_START v2.0.0 ===
+# === ENERGY_MANAGER_CORE_START v1.3.0 ===
 default_config:
 
 frontend:

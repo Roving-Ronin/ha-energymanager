@@ -1,4 +1,4 @@
-# === ENERGY_MANAGER_AUTOMATIONS_START v2.0.0 ===
+# === ENERGY_MANAGER_AUTOMATIONS_START v1.3.0 ===
 
 - id: em_placeholder_do_not_remove
   alias: "EM Placeholder (safe)"

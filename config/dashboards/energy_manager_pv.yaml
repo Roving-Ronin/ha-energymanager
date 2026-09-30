@@ -1,4 +1,4 @@
-# energy_manager_pv.yaml v2.0.0
+# energy_manager_pv.yaml v1.3.0
 views:
   - type: sections
     max_columns: 3

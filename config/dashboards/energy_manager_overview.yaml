@@ -1,4 +1,4 @@
-#energy_manager_overview.yaml v2.0.0
+#energy_manager_overview.yaml v1.3.0
 views:
   - type: custom:layout-card
     layout_type: grid

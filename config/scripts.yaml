@@ -1,5 +1,5 @@
 # scripts.yaml
-# === ENERGY_MANAGER_SCRIPTS_START v2.0.0 ===
+# === ENERGY_MANAGER_SCRIPTS_START v1.3.0 ===
 # Moved to packages (integrations/em_scripts.yaml)
 
 em_placeholder_do_not_remove:

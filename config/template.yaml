@@ -1,4 +1,4 @@
-# === ENERGY_MANAGER_TEMPLATES_START v2.0.0 ===
+# === ENERGY_MANAGER_TEMPLATES_START v1.3.0 ===
 # Moved to packages (integrations/em_templates.yaml)
 
 - sensor:

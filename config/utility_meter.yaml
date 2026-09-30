@@ -1,4 +1,4 @@
-# === ENERGY_MANAGER_UTILITY_METERS_START v2.0.0 ===
+# === ENERGY_MANAGER_UTILITY_METERS_START v1.3.0 ===
 # Five minutes
 inverter_import_energy_5_minutes:
   unique_id: inverter_import_energy_5_minutes

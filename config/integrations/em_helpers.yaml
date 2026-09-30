@@ -1,5 +1,5 @@
 # Energy Manager Helper File
-# === ENERGY_MANAGER_SHELL_COMMANDS_START v2.0.0 ===
+# === ENERGY_MANAGER_SHELL_COMMANDS_START v1.3.0 ===
 shell_command:
   electricity_load: "python3 /config/scripts/electricity_dashboard.py load"
   electricity_update: "python3 /config/scripts/electricity_dashboard.py update '{{ data }}'"
@@ -41,7 +41,7 @@ rest_command:
     payload: '{"source":"dashboard"}'
 # === ENERGY_MANAGER_SHELL_COMMANDS_END ===
 
-# === ENERGY_MANAGER_SENSORS_START v2.0.0 ===
+# === ENERGY_MANAGER_SENSORS_START v1.3.0 ===
 sensor:
   - platform: integration
     source: sensor.inverter_import_power
@@ -193,7 +193,7 @@ command_line:
 
 # === ENERGY_MANAGER_SENSORS_END ===
 
-# === ENERGY_MANAGER_UPDATE_INPUTS_START v2.0.0 ===
+# === ENERGY_MANAGER_UPDATE_INPUTS_START v1.3.0 ===
 input_select:
   inverter_run_mode:
     name: Inverter mode
