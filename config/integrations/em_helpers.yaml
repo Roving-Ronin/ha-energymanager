@@ -317,8 +317,10 @@ input_select:
   em_update_branch:
     name: Energy Manager Update Branch
     options:
-      - "Main"
-      - "Development"
+      - "main"
+      - "early"
+      - "development"
+      - "test"
     icon: mdi:github
 
   dynamic_reserve_strategy:

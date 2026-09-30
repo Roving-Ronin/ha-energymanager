@@ -15,8 +15,7 @@ import argparse
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Energy Manager Update Script')
     parser.add_argument('--force-reinstall', action='store_true', help='Force reinstall of current version')
-    parser.add_argument('--branch', choices=('main', 'development'), help='Override HA branch selector')
-    # Existing Home Assistant shell commands may still pass this; it is ignored.
+    parser.add_argument('--branch', choices=('main', 'test', 'early', 'development'), help='Override HA branch selector')
     parser.add_argument('--key', default='', help=argparse.SUPPRESS)
     return parser.parse_args()
 
@@ -1151,8 +1150,6 @@ try:
     else:
         print(f"Starting update to version {manifest['version']}...")
     
-    # The running updater is replaced with the other selected files; Python keeps
-    # executing the already loaded script, so no second updater process is needed.
     update_dashboard_status(f"Updating to version {manifest['version']}...", "info")
     success = True
     selected_files = {}
@@ -1170,7 +1167,6 @@ try:
             success = False
             continue
         try:
-            # file_merger operates on text, including JSON/YAML and JS.
             with open(temp_path, 'r', encoding='utf-8') as f:
                 new_content = f.read()
             action = file_info.get('action', 'merge')

@@ -25,7 +25,7 @@ def safe_repo_path(path):
     if not isinstance(path, str) or not path or '\\' in path:
         raise ValueError(f'Invalid repository path: {path!r}')
     if path.startswith('/share/'):
-        path = path[1:]  # The manifest destination /share/... maps to repo share/...
+        path = path[1:]
     p = PurePosixPath(path)
     if p.is_absolute() or any(part in ('', '.', '..') for part in path.split('/')) or ':' in path:
         raise ValueError(f'Unsafe repository path: {path!r}')
@@ -54,12 +54,10 @@ class EnergyManagerUpdateChecker:
         self.target_sha = None
 
     def resolve_branch(self, branch):
-        # The Home Assistant shell command passes the selector explicitly.
-        # CLI checks without --branch (including older HA templates) use main.
         branch = str(branch or 'main').strip().lower()
         if branch in ('unknown', 'unavailable'):
             branch = 'main'
-        if branch not in ('main', 'development'):
+        if branch not in ('main', 'test', 'early', 'development'):
             raise ValueError(f'Invalid update branch: {branch!r}')
         return branch
 
