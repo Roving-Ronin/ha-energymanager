@@ -2241,7 +2241,7 @@ input_datetime:
     name: Flow Power Peak End
     has_date: false
     has_time: true
-    initial: "19:30:00"
+    initial: "21:30:00"
     icon: mdi:clock-end
 
   globird_super_start:
