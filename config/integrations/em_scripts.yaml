@@ -291,6 +291,12 @@ script:
                       - condition: template
                         value_template: "{{ option == 'Stop' }}"
                     sequence:
+                      - service: modbus.write_register
+                        data:
+                          hub: sigenergy_inverter
+                          unit: 247
+                          address: 40029 # (EMS mode)
+                          value: 1
                       - delay: "00:00:01"
                       - service: modbus.write_register
                         data:
@@ -298,13 +304,6 @@ script:
                           unit: 247
                           address: 40031 # ems mode command
                           value: 2 # Stop
-                      - delay: "00:00:01"
-                      - service: modbus.write_register
-                        data:
-                          hub: sigenergy_inverter
-                          unit: 247
-                          address: 40029 # (EMS mode)
-                          value: 0
                   - conditions:
                       - condition: template
                         value_template: "{{ option == 'Forced Charge' }}"
