@@ -991,9 +991,9 @@ views:
                             {% set val = states('sensor.sigenergy_remote_ems') %}
                             --remote-ems-color:
                               {% if val == 'Off' or val == 'off' %}
-                                green
-                              {% elif val == 'On' or val == 'on' %}
                                 orange
+                              {% elif val == 'On' or val == 'on' %}
+                                green
                               {% else %}
                                 var(--primary-text-color)
                               {% endif %};
