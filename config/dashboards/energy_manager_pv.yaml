@@ -130,9 +130,9 @@ views:
       icon: mdi:currency-usd
       unit: $/kWh
       view_layout:
-        em_id: grid-sell-price
+        em_id: sell-price
         em_width: 6
-        em_name: Grid Sell Price
+        em_name: Sell Price
         em_column: 0
         em_order: 1
     - type: markdown
