@@ -221,6 +221,26 @@ views:
         em_column: 0
         em_order: 2
         em_required: true
+    - type: conditional
+      conditions:
+        - condition: state
+          entity: binary_sensor.ocpp_active
+          state: "on"
+      card:
+        type: markdown
+        content: >
+          ## 🚗 EV Charging
+
+          Status: {{ states('input_text.ev_reason_text') }}
+
+          Decision: {{ states('input_text.ev_arbitration_reason') }}
+      view_layout:
+        em_id: ev_decision
+        em_width: 12
+        em_name: EV Charging Decision
+        em_column: 0
+        em_order: 3
+        em_required: true
     - show_name: true
       show_icon: true
       type: button
@@ -238,7 +258,7 @@ views:
         em_width: 4
         em_name: Energy Control Switch
         em_column: 0
-        em_order: 3
+        em_order: 4
         em_required: true
     - type: conditional
       grid_options:
@@ -260,7 +280,7 @@ views:
         em_width: 4
         em_name: High Sell Price Mode
         em_column: 0
-        em_order: 5
+        em_order: 6
     - type: conditional
       grid_options:
         columns: 4
@@ -281,7 +301,7 @@ views:
         em_width: 4
         em_name: Sell/Buy Mode
         em_column: 0
-        em_order: 4
+        em_order: 5
     - type: entities
       entities:
       - entity: input_boolean.energy_control_auto_reenable
@@ -291,7 +311,7 @@ views:
         em_width: 12
         em_name: Auto-reenable EM toggle
         em_column: 0
-        em_order: 6
+        em_order: 7
         em_required: true
     - type: conditional
       conditions:
@@ -310,7 +330,7 @@ views:
         em_width: 12
         em_name: Auto-reenable Timer
         em_column: 0
-        em_order: 7
+        em_order: 8
         em_required: true
     - type: conditional
       conditions:
@@ -339,7 +359,7 @@ views:
         em_width: 12
         em_name: Node-RED warning
         em_column: 0
-        em_order: 10
+        em_order: 11
     - type: markdown
       entity_id:
       - sensor.energy_manager_plan
@@ -426,7 +446,7 @@ views:
         em_width: 12
         em_name: Future Decisions
         em_column: 0
-        em_order: 8
+        em_order: 9
     - type: markdown
       content: >
         ## Net
@@ -1959,7 +1979,7 @@ views:
         em_width: 12
         em_name: System Status
         em_column: 0
-        em_order: 9
+        em_order: 10
         em_hidden: true
     - type: entities
       title: System Information
@@ -2371,6 +2391,7 @@ views:
         em_column: 2
         em_order: 12
         em_hidden: true
+
     - daily_forecast_layout: vertical
       entity_extended: sensor.home_short_text_0
       entity_extended_1: sensor.home_extended_text_1
@@ -2441,6 +2462,7 @@ views:
         em_column: 1
         em_order: 19
         em_hidden: true
+
     - daily_forecast_days: 4
       daily_forecast_layout: vertical
       entity_extended: sensor.home_extended_text_0
@@ -3449,6 +3471,7 @@ views:
                   entities:
                     - entity: input_datetime.exclusion_start_time
                     - entity: input_datetime.exclusion_end_time
+
               - type: entities
                 title: Dynamic Battery Reserve
                 entities:
@@ -3460,6 +3483,7 @@ views:
                     row:
                       entity: input_select.dynamic_reserve_strategy
                       name: Strategy
+
               - type: markdown
                 content: >
                   **Dynamic Reserve** will calculate the best battery reserve for your selling strategy based on your predicted house power load between "now" and when your PV Generation exceeds your house load in the morning. Note that you should start **Conservatively** until you understand how it works.
@@ -3482,6 +3506,7 @@ views:
                       margin-top: -20px;
                       margin-bottom: 20px;
                     }
+
               - type: entities
                 title: PV Dashboard Configuration (front page)
                 entities:
@@ -3499,6 +3524,7 @@ views:
                     name: Pricing Forecast
                   - entity: input_boolean.pv_dashboard_ev
                     name: EV Charging Forecast
+
               - type: conditional
                 conditions:
                   - entity: input_select.electricity_provider
@@ -4452,6 +4478,7 @@ views:
                         perform_action: input_button.press
                         target:
                           entity_id: input_button.validate_diy_tariff
+
               - type: conditional
                 conditions:
                   - entity: input_select.electricity_provider
