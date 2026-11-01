@@ -578,6 +578,12 @@
       "description": "Manifest for Dashboard Layout Component",
       "backup_current": true,
       "new_in_version": "2.0.0"
+    },
+    "custom_components/em_dashboard_layout/brand/icon.png": {
+      "action": "replace",
+      "description": "Energy Manager Logo",
+      "backup_current": false,
+      "new_in_version": "2.0.0"
     }  
   },
   "lovelace_resources": [
