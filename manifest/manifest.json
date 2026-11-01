@@ -411,6 +411,12 @@
       "backup_current": true,
       "new_in_version": "1.2.0"
     },
+    "www/energy-manager-layout.js": {
+      "action": "replace",
+      "description": "PV Dashboard Layout",
+      "backup_current": true,
+      "new_in_version": "2.0.0"
+    },  
     "scripts/update_checker.py": {
       "action": "replace",
       "description": "Update checker",
