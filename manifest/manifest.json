@@ -566,7 +566,19 @@
       "description": "Sensors to be excluded from Power Load",
       "backup_current": true,
       "new_in_version": "1.2.0"
-    }
+    },
+    "custom_components/em_dashboard_layout/__init__.py": {
+      "action": "replace",
+      "description": "Dashboard Layout Component",
+      "backup_current": true,
+      "new_in_version": "2.0.0"
+    },
+    "custom_components/em_dashboard_layout/manifest.json": {
+      "action": "replace",
+      "description": "Manifest for Dashboard Layout Component",
+      "backup_current": true,
+      "new_in_version": "2.0.0"
+    }  
   },
   "lovelace_resources": [
     {
@@ -603,8 +615,13 @@
     "url": "/local/energy-manager-globird-pricing-card.js?v=1",
     "type": "module",
     "new_in_version": "2.0.0"
-    }
-    ],
+    },
+    {
+    "url": "/local/energy-manager-layout.js?v=7.2.4",
+    "type": "module",
+    "new_in_version": "2.0.0"
+    }  
+  ],
   "nodered_flows": {
     "download_url": "nodered/flows.json",
     "description": "Updated Node-RED flows",
