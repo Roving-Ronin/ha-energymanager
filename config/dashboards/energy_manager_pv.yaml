@@ -172,6 +172,7 @@ views:
             .replace('Reason: FICB','Reason: Free import - charging battery')
             .replace('Batt:', 'Battery SoC:')
             .replace('Exp SOC:', 'Battery reserve:')
+            .replace('ESOC:', 'Export SOC:')
             .replace('free_', 'Free Tariff #')
             .replace('peak_', 'Peak Tariff #')
             .replace('offpeak_', 'Offpeak Tariff #')
