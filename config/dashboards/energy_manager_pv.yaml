@@ -29,7 +29,7 @@ views:
       view_layout:
         em_id: warning
         em_width: 12
-        em_columns: 0
+        em_column: 0
         em_name: Emergency Override Warning
         em_fixed: true
         em_required: true
@@ -67,7 +67,7 @@ views:
       view_layout:
         em_id: motd-version
         em_name: MOTD Version
-        em_columns: 0
+        em_column: 0
         em_width: 12
         em_fixed: true
         em_required: true
@@ -104,8 +104,8 @@ views:
             service: rest_command.em_general_mark_read
       view_layout:
         em_id: motd-general
-        em_width: 4
-        em_columns: 0
+        em_width: 12
+        em_column: 0
         em_name: MOTD General
         em_fixed: true
         em_required: true
