@@ -1,0 +1,9 @@
+{
+  "domain": "em_dashboard_layout",
+  "name": "Energy Manager Dashboard Layout Storage",
+  "version": "2.0.0",
+  "documentation": "https://github.com/ha-energymanager/ha-energymanager",
+  "dependencies": ["websocket_api"],
+  "codeowners": [],
+  "iot_class": "local_push"
+}
