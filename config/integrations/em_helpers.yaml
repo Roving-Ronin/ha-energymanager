@@ -692,27 +692,6 @@ input_boolean:
   other_export_3_limit:
     name: "Export Cap #3"
 
-  pv_dashboard_solar:
-    name: PV Solar Forecasts
-
-  pv_dashboard_entities:
-    name: PV Entities
-
-  pv_dashboard_future:
-    name: PV Future Decisions
-  
-  pv_dashboard_12hr:
-    name: PV 12hr History
-
-  pv_dashboard_profile:
-    name: PV Power Profile
-
-  pv_dashboard_ev:
-    name: PV EV Forecast
-
-  pv_dashboard_pricing:
-    name: PV Pricing Forecast
-
 input_button:
   energy_profile_save:
     name: Save Energy Profile
