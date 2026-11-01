@@ -2076,6 +2076,115 @@ views:
         em_order: 9
         em_hidden: true
     - type: entities
+      title: Power Settings
+      entities:
+        - type: conditional
+          conditions:
+            - entity: input_select.inverter_brand
+              state_not: ["alphaess", "fronius"]
+          row:
+            entity: input_number.inverter_max_charge_power
+            name: Max Battery Charge Power
+            mode: box
+        - type: conditional
+          conditions:
+            - entity: input_select.inverter_brand
+              state_not: ["alphaess", "fronius"]
+          row:
+            entity: input_number.inverter_max_discharge_power
+            name: Max Battery Discharge Power
+            mode: box
+        - type: conditional
+          conditions:
+            - entity: input_select.inverter_brand
+              state: "fronius"
+          row:
+            entity: input_number.inverter_max_charge_power
+            name: Max Battery Charge/Discharge Power
+            mode: box
+        - type: conditional
+          conditions:
+            - entity: input_select.inverter_brand
+              state: "alphaess"
+          row:
+            entity: input_number.inverter_max_charge_power
+            name: Max Battery Charge/Discharge Power
+            mode: box
+        - type: conditional
+          conditions:
+            - entity: input_select.inverter_brand
+              state: "sigenergy"
+          row:
+            entity: input_number.inverter_pv_power_limit
+            name: PV Power Limit
+        - type: conditional
+          conditions:
+            - entity: input_select.inverter_brand
+              state_not: ["sigenergy", "alphaess"]
+          row:
+            entity: input_boolean.inverter_export_power_limit_enabled_input
+            name: Export Power Limit Enabled
+        - entity: input_number.inverter_export_power_limit_input
+          name: Export Power Limit
+          mode: box
+      view_layout:
+        em_id: power-settings
+        em_width: 12
+        em_name: Power Settings
+        em_column: 2
+        em_order: 10
+        em_hidden: true
+    - type: entities
+      title: Scheduled Charge
+      entities:
+        - entity: input_boolean.scheduled_charge_enabled
+        - type: conditional
+          conditions:
+            - entity: input_boolean.scheduled_charge_enabled
+              state: "on"
+          row:
+            entity: input_datetime.scheduled_charge_start
+            name: Start Time
+        - type: conditional
+          conditions:
+            - entity: input_boolean.scheduled_charge_enabled
+              state: "on"
+          row:
+            entity: input_datetime.scheduled_charge_end
+            name: End Time
+        - type: conditional
+          conditions:
+            - entity: input_boolean.scheduled_charge_enabled
+              state: "on"
+          row:
+            entity: input_number.scheduled_charge_soc
+            name: Charge to SoC
+        - type: conditional
+          conditions:
+            - entity: input_boolean.scheduled_charge_enabled
+              state: "on"
+            - entity: input_select.electricity_provider
+              state: ["Amber Electric", "LocalVolts", "Globird"]
+          row:
+            entity: input_number.scheduled_charge_price
+            name: Max buy price
+        - type: conditional
+          conditions:
+            - entity: input_boolean.scheduled_charge_enabled
+              state: "on"
+            - entity: input_select.electricity_provider
+              state: "Flow Power"
+          row:
+            entity: input_select.scheduled_charge_signal
+            name: Max buy price Signal
+      view_layout:
+        em_id: scheduled-charge
+        em_width: 12
+        em_name: Scheduled Charge
+        em_column: 2
+        em_order: 11
+        em_hidden: true
+    - type: entities
       title: Power Status
       show_header_toggle: false
       entities:
@@ -2115,7 +2224,7 @@ views:
         em_width: 12
         em_name: Power Status
         em_column: 2
-        em_order: 10
+        em_order: 12
         em_hidden: true
     - type: entities
       title: Energy Today
@@ -2218,7 +2327,7 @@ views:
         em_width: 12
         em_name: Energy Today
         em_column: 2
-        em_order: 11
+        em_order: 13
         em_hidden: true
     - type: entities
       title: Inverter Settings
@@ -2390,9 +2499,8 @@ views:
         em_width: 12
         em_name: Inverter Settings
         em_column: 2
-        em_order: 12
+        em_order: 14
         em_hidden: true
-
     - daily_forecast_layout: vertical
       entity_extended: sensor.home_short_text_0
       entity_extended_1: sensor.home_extended_text_1
