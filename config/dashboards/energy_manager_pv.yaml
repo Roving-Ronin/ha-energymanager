@@ -3507,25 +3507,6 @@ views:
                       margin-top: -20px;
                       margin-bottom: 20px;
                     }
-
-              - type: entities
-                title: PV Dashboard Configuration (front page)
-                entities:
-                  - entity: input_boolean.pv_dashboard_solar
-                    name: Solar Forecasts
-                  - entity: input_boolean.pv_dashboard_entities
-                    name: Entities
-                  - entity: input_boolean.pv_dashboard_future
-                    name: Future Decisions
-                  - entity: input_boolean.pv_dashboard_12hr
-                    name: 12hr History Chart
-                  - entity: input_boolean.pv_dashboard_profile
-                    name: Power Profile Chart
-                  - entity: input_boolean.pv_dashboard_pricing
-                    name: Pricing Forecast
-                  - entity: input_boolean.pv_dashboard_ev
-                    name: EV Charging Forecast
-
               - type: conditional
                 conditions:
                   - entity: input_select.electricity_provider
