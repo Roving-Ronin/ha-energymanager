@@ -1,4 +1,4 @@
-"""Shared Energy Manager dashboard layout stored under /config/.energy_manager."""
+"""Shared Energy Manager dashboard layouts with server-side named profiles."""
 from __future__ import annotations
 
 import asyncio
@@ -14,16 +14,37 @@ from homeassistant.helpers.typing import ConfigType
 
 DOMAIN = "em_dashboard_layout"
 CONFIG_SCHEMA = vol.Schema({vol.Optional(DOMAIN): vol.Schema({})}, extra=vol.ALLOW_EXTRA)
-MAX_BYTES = 150_000
+MAX_BYTES = 300_000
+MAX_PROFILES = 20
+
+
+def _default_state() -> dict:
+    return {"version": 7, "revision": 0, "active_profile": "everyday",
+            "profiles": {"everyday": {"name": "Everyday", "cards": {}}}}
 
 
 def _read(path: Path) -> dict:
     if not path.exists():
-        return {"version": 6, "revision": 0, "cards": {}}
+        return _default_state()
     data = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(data, dict) or not isinstance(data.get("cards"), dict):
+    if not isinstance(data, dict):
         raise ValueError("Invalid dashboard layout file")
-    return data
+    if isinstance(data.get("profiles"), dict):
+        profiles = data["profiles"]
+        active = data.get("active_profile")
+        if not profiles or active not in profiles:
+            raise ValueError("Invalid dashboard profile data")
+        for profile in profiles.values():
+            if not isinstance(profile, dict) or not isinstance(profile.get("name"), str) or not isinstance(profile.get("cards"), dict):
+                raise ValueError("Invalid dashboard profile")
+        return data
+    # Transparently migrate the v6 shared layout without changing the existing file
+    # until the first successful write. The existing preferences become Everyday.
+    if not isinstance(data.get("cards"), dict):
+        raise ValueError("Invalid legacy dashboard layout")
+    return {"version": 7, "revision": int(data.get("revision", 0)),
+            "active_profile": "everyday",
+            "profiles": {"everyday": {"name": "Everyday", "cards": data["cards"]}}}
 
 
 def _write(path: Path, data: dict) -> None:
@@ -40,15 +61,68 @@ def _write(path: Path, data: dict) -> None:
             os.unlink(tmp)
 
 
+def _response(data: dict) -> dict:
+    active = data["active_profile"]
+    return {"version": 7, "revision": data["revision"],
+            "active_profile": active,
+            "profiles": [{"id": key, "name": p["name"]} for key, p in data["profiles"].items()],
+            "cards": data["profiles"][active]["cards"]}
+
+
+def _sanitize_cards(cards: dict) -> dict:
+    if len(cards) > 500 or any(not isinstance(k, str) or len(k) > 120 or not isinstance(v, dict) for k, v in cards.items()):
+        raise ValueError("Invalid card entries")
+    clean = {}
+    for key, value in cards.items():
+        has_xy = "x" in value and "y" in value
+        if has_xy:
+            x, y, w, h = (value.get(k) for k in ("x", "y", "w", "h"))
+            if any(type(n) is not int for n in (x, y, w, h)):
+                raise ValueError(f"Invalid layout entry for {key}")
+            if not (0 <= x <= 23 and 0 <= y <= 5000 and 1 <= w <= 24 and 1 <= h <= 80 and x + w <= 24):
+                raise ValueError(f"Invalid layout entry for {key}")
+            entry = {"x": x, "y": y, "w": w, "h": h}
+        else:
+            # Match previous server validation, retaining backwards compatibility.
+            col, order, width = int(value.get("col", 0)), int(value.get("order", 0)), int(value.get("width", 4))
+            old_height = value.get("height", "auto")
+            if not (0 <= col <= 2 and 0 <= order <= 1000 and 1 <= width <= 12):
+                raise ValueError(f"Invalid layout entry for {key}")
+            if old_height != "auto" and (type(old_height) is not int or not 80 <= old_height <= 1200):
+                raise ValueError(f"Invalid layout entry for {key}")
+            entry = {"col": col, "order": order, "width": width, "height": old_height}
+        if type(value.get("hidden", False)) is not bool:
+            raise ValueError(f"Invalid layout entry for {key}")
+        entry["hidden"] = value.get("hidden", False)
+        devices = value.get("hidden_devices", [])
+        if (not isinstance(devices, list) or
+                any(not isinstance(d, str) or d not in ("desktop", "tablet", "mobile") for d in devices)):
+            raise ValueError(f"Invalid device visibility for {key}")
+        entry["hidden_devices"] = list(dict.fromkeys(devices))
+        if type(value.get("locked", False)) is not bool:
+            raise ValueError(f"Invalid lock state for {key}")
+        entry["locked"] = value.get("locked", False)
+        lock_device = value.get("lock_device")
+        if lock_device is not None and lock_device not in ("desktop", "tablet", "mobile"):
+            raise ValueError(f"Invalid lock device for {key}")
+        entry["lock_device"] = lock_device
+        clean[key] = entry
+    return clean
+
+
+def _ensure_size(data):
+    if len(json.dumps(data).encode("utf-8")) > MAX_BYTES:
+        raise ValueError("Dashboard profiles exceed the storage limit")
+
+
 @websocket_api.websocket_command({vol.Required("type"): "em_dashboard_layout/get"})
 @websocket_api.async_response
 async def ws_get(hass, connection, msg):
-    path = hass.data[DOMAIN]["path"]
-    lock = hass.data[DOMAIN]["lock"]
+    storage = hass.data[DOMAIN]
     try:
-        async with lock:
-            data = await asyncio.to_thread(_read, path)
-        connection.send_result(msg["id"], data)
+        async with storage["lock"]:
+            data = await asyncio.to_thread(_read, storage["path"])
+        connection.send_result(msg["id"], _response(data))
     except (ValueError, OSError, json.JSONDecodeError) as err:
         connection.send_error(msg["id"], "read_failed", str(err))
 
@@ -57,64 +131,207 @@ async def ws_get(hass, connection, msg):
     vol.Required("type"): "em_dashboard_layout/save",
     vol.Required("cards"): dict,
     vol.Required("revision"): vol.All(int, vol.Range(min=0)),
+    vol.Optional("profile_id"): str,
 })
 @websocket_api.async_response
 async def ws_save(hass, connection, msg):
-    # Shared dashboard preferences: editing requires Home Assistant administrator access.
     if not connection.user.is_admin:
-        connection.send_error(msg["id"], "unauthorized", "Administrator access required to change shared layout")
+        connection.send_error(msg["id"], "unauthorized", "Administrator access required")
         return
-    cards = msg["cards"]
-    if len(cards) > 500 or any(not isinstance(k, str) or len(k) > 120 or not isinstance(v, dict) for k, v in cards.items()):
-        connection.send_error(msg["id"], "invalid_layout", "Invalid card entries")
-        return
-    # v4 uses exact grid coordinates. Older v2/v3 keys remain accepted for migration.
-    clean = {}
-    for key, value in cards.items():
-        try:
-            has_xy = "x" in value and "y" in value
-            if has_xy:
-                x, y, w, h = (value.get(k) for k in ("x", "y", "w", "h"))
-                if any(type(n) is not int for n in (x, y, w, h)):
-                    raise ValueError()
-                if not (0 <= x <= 23 and 0 <= y <= 5000 and 1 <= w <= 24 and 1 <= h <= 80 and x + w <= 24):
-                    raise ValueError()
-                entry = {"x": x, "y": y, "w": w, "h": h}
-            else:
-                col, order, width = int(value.get("col", 0)), int(value.get("order", 0)), int(value.get("width", 4))
-                old_height = value.get("height", "auto")
-                if not (0 <= col <= 2 and 0 <= order <= 1000 and 1 <= width <= 12):
-                    raise ValueError()
-                if old_height != "auto" and (type(old_height) is not int or not 80 <= old_height <= 1200):
-                    raise ValueError()
-                entry = {"col": col, "order": order, "width": width, "height": old_height}
-            if type(value.get("hidden", False)) is not bool:
-                raise ValueError()
-            entry["hidden"] = value.get("hidden", False)
-        except (ValueError, TypeError):
-            connection.send_error(msg["id"], "invalid_layout", f"Invalid layout entry for {key}")
-            return
-        clean[key] = entry
-    payload = {"version": 6, "revision": msg["revision"] + 1, "cards": clean}
-    if len(json.dumps(payload).encode("utf-8")) > MAX_BYTES:
-        connection.send_error(msg["id"], "too_large", "Layout exceeds size limit")
-        return
-    path = hass.data[DOMAIN]["path"]
-    lock = hass.data[DOMAIN]["lock"]
     try:
-        async with lock:
-            current = await asyncio.to_thread(_read, path)
-            if int(current.get("revision", 0)) != msg["revision"]:
+        cards = _sanitize_cards(msg["cards"])
+        storage = hass.data[DOMAIN]
+        async with storage["lock"]:
+            data = await asyncio.to_thread(_read, storage["path"])
+            if data["revision"] != msg["revision"]:
                 connection.send_error(msg["id"], "conflict", "Another device changed this layout. Reload and retry.")
                 return
-            await asyncio.to_thread(_write, path, payload)
-        connection.send_result(msg["id"], payload)
-    except (ValueError, OSError, json.JSONDecodeError) as err:
-        connection.send_error(msg["id"], "write_failed", str(err))
+            if msg.get("profile_id", data["active_profile"]) != data["active_profile"]:
+                connection.send_error(msg["id"], "conflict", "Active profile changed. Reload and retry.")
+                return
+            # Retain orphaned IDs from cards temporarily removed in newer YAML.
+            # A card returning later can recover its previous position/visibility.
+            previous = data["profiles"][data["active_profile"]]["cards"]
+            previous.update(cards)
+            data["profiles"][data["active_profile"]]["cards"] = previous
+            data["revision"] += 1
+            _ensure_size(data)
+            await asyncio.to_thread(_write, storage["path"], data)
+        connection.send_result(msg["id"], _response(data))
+    except (ValueError, OSError, json.JSONDecodeError, TypeError) as err:
+        connection.send_error(msg["id"], "save_failed", str(err))
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): "em_dashboard_layout/profile",
+    vol.Required("action"): vol.In(["create", "rename", "delete", "activate"]),
+    vol.Required("revision"): vol.All(int, vol.Range(min=0)),
+    vol.Optional("profile_id"): str,
+    vol.Optional("name"): str,
+    vol.Optional("cards"): dict,
+})
+@websocket_api.async_response
+async def ws_profile(hass, connection, msg):
+    if not connection.user.is_admin:
+        connection.send_error(msg["id"], "unauthorized", "Administrator access required")
+        return
+    storage = hass.data[DOMAIN]
+    try:
+        async with storage["lock"]:
+            data = await asyncio.to_thread(_read, storage["path"])
+            if data["revision"] != msg["revision"]:
+                connection.send_error(msg["id"], "conflict", "Another device changed the dashboard. Reload and retry.")
+                return
+            action, pid = msg["action"], msg.get("profile_id", "")
+            profiles = data["profiles"]
+            if action == "create":
+                name = msg.get("name", "").strip()
+                if not 1 <= len(name) <= 50:
+                    raise ValueError("Profile name must be 1–50 characters")
+                if len(profiles) >= MAX_PROFILES:
+                    raise ValueError("Maximum number of profiles reached")
+                if any(p["name"].casefold() == name.casefold() for p in profiles.values()):
+                    raise ValueError("Profile name already exists")
+                # The UI supplies the current, fully resolved layout so YAML defaults
+                # and unsaved overrides are faithfully copied into the new profile.
+                cards = _sanitize_cards(msg.get("cards", profiles[data["active_profile"]]["cards"]))
+                idx = 1
+                while f"profile-{idx}" in profiles:
+                    idx += 1
+                pid = f"profile-{idx}"
+                profiles[pid] = {"name": name, "cards": cards}
+                data["active_profile"] = pid
+            elif action == "rename":
+                if pid not in profiles:
+                    raise ValueError("Unknown profile")
+                name = msg.get("name", "").strip()
+                if not 1 <= len(name) <= 50:
+                    raise ValueError("Profile name must be 1–50 characters")
+                if any(k != pid and p["name"].casefold() == name.casefold() for k, p in profiles.items()):
+                    raise ValueError("Profile name already exists")
+                profiles[pid]["name"] = name
+            elif action == "delete":
+                if pid not in profiles:
+                    raise ValueError("Unknown profile")
+                if len(profiles) == 1:
+                    raise ValueError("Cannot delete the last profile")
+                del profiles[pid]
+                if data["active_profile"] == pid:
+                    data["active_profile"] = next(iter(profiles))
+            elif action == "activate":
+                if pid not in profiles:
+                    raise ValueError("Unknown profile")
+                data["active_profile"] = pid
+            data["revision"] += 1
+            _ensure_size(data)
+            await asyncio.to_thread(_write, storage["path"], data)
+        connection.send_result(msg["id"], _response(data))
+    except (ValueError, OSError, json.JSONDecodeError, TypeError) as err:
+        connection.send_error(msg["id"], "profile_failed", str(err))
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): "em_dashboard_layout/sync",
+    vol.Required("revision"): vol.All(int, vol.Range(min=0)),
+    vol.Required("specs"): list,
+})
+@websocket_api.async_response
+async def ws_sync(hass, connection, msg):
+    """Idempotently reconcile YAML card IDs against every saved named profile.
+
+    New cards append to their configured column so existing customised positions
+    never shift. Removed cards stay as dormant entries. Renames are explicitly
+    opt-in through em_previous_ids / em_previous_id in card view_layout.
+    """
+    if not connection.user.is_admin:
+        connection.send_error(msg["id"], "unauthorized", "Administrator access required")
+        return
+    try:
+        raw_specs = msg["specs"]
+        if len(raw_specs) > 500:
+            raise ValueError("Too many card specifications")
+        specs, seen, claimed_aliases = [], set(), set()
+        for raw in raw_specs:
+            if not isinstance(raw, dict):
+                raise ValueError("Invalid card specification")
+            cid = raw.get("id")
+            if not isinstance(cid, str) or not 1 <= len(cid) <= 120 or cid in seen:
+                raise ValueError("Invalid or duplicate card ID")
+            seen.add(cid)
+            if any(type(raw.get(key)) is not int for key in ("col", "order", "width")):
+                raise ValueError("Invalid default coordinates")
+            if not (0 <= raw["col"] <= 2 and 0 <= raw["order"] <= 1000 and 1 <= raw["width"] <= 12):
+                raise ValueError("Invalid default coordinates")
+            if type(raw.get("hidden")) is not bool or type(raw.get("required")) is not bool:
+                raise ValueError("Invalid default visibility")
+            aliases = raw.get("aliases", [])
+            if (not isinstance(aliases, list) or len(aliases) > 20 or
+                    any(not isinstance(a, str) or not 1 <= len(a) <= 120 or a == cid for a in aliases)):
+                raise ValueError("Invalid card rename aliases")
+            for alias in aliases:
+                if alias in claimed_aliases:
+                    raise ValueError("Ambiguous card rename alias")
+                claimed_aliases.add(alias)
+            devices = raw.get("hidden_devices", [])
+            if not isinstance(devices, list) or any(d not in ("desktop", "tablet", "mobile") for d in devices):
+                raise ValueError("Invalid default device visibility")
+            specs.append({"id": cid, "col": raw["col"], "order": raw["order"],
+                          "width": raw["width"], "hidden": raw["hidden"],
+                          "required": raw["required"], "locked": raw.get("locked", False), "aliases": aliases,
+                          "hidden_devices": list(dict.fromkeys(devices))})
+        if seen.intersection(claimed_aliases):
+            raise ValueError("Rename aliases overlap active card IDs")
+        storage = hass.data[DOMAIN]
+        async with storage["lock"]:
+            data = await asyncio.to_thread(_read, storage["path"])
+            if data["revision"] != msg["revision"]:
+                connection.send_error(msg["id"], "conflict", "Dashboard layout changed. Reload and retry.")
+                return
+            changed = False
+            for profile in data["profiles"].values():
+                cards = profile["cards"]
+                # An untouched profile has no overrides: YAML already supplies all
+                # defaults, so avoid writing a partially materialised layout.
+                if not cards:
+                    continue
+                for spec in specs:
+                    cid = spec["id"]
+                    if cid in cards:
+                        continue  # Existing saved settings always win over YAML defaults.
+                    old_id = next((a for a in spec["aliases"] if a in cards), None)
+                    if old_id:
+                        cards[cid] = cards.pop(old_id)
+                        # A renamed card keeps its saved position, width and visibility.
+                        changed = True
+                    else:
+                        # Append new cards to avoid moving any existing custom positions.
+                        last = max((int(c.get("order", -1)) for c in cards.values()
+                                    if isinstance(c, dict) and c.get("col") == spec["col"]
+                                    and isinstance(c.get("order"), int)), default=-1)
+                        # There is no need to materialise every YAML default on first setup.
+                        # Only add a newly appearing card once other saved cards exist.
+                        if cards:
+                            cards[cid] = {"col": spec["col"], "order": min(1000, last+1),
+                                          "width": spec["width"],
+                                          "hidden": spec["hidden"] and not spec["required"],
+                                          "hidden_devices": [] if spec["required"] else spec["hidden_devices"], "locked": spec.get("locked", False)}
+                            changed = True
+            if changed:
+                data["revision"] += 1
+                _ensure_size(data)
+                await asyncio.to_thread(_write, storage["path"], data)
+        response = _response(data)
+        response["migrated"] = changed
+        connection.send_result(msg["id"], response)
+    except (ValueError, OSError, json.JSONDecodeError, TypeError) as err:
+        connection.send_error(msg["id"], "sync_failed", str(err))
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
-    hass.data[DOMAIN] = {"path": Path(hass.config.path(".energy_manager", "dashboard_layout.json")), "lock": asyncio.Lock()}
+    hass.data[DOMAIN] = {"path": Path(hass.config.path(".energy_manager", "dashboard_layout.json")),
+                         "lock": asyncio.Lock()}
     websocket_api.async_register_command(hass, ws_get)
     websocket_api.async_register_command(hass, ws_save)
+    websocket_api.async_register_command(hass, ws_profile)
+    websocket_api.async_register_command(hass, ws_sync)
     return True
