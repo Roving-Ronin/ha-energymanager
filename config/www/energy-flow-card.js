@@ -121,7 +121,7 @@
           .lightning-bolt {position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;filter:drop-shadow(0 0 5px #fff) drop-shadow(0 0 15px #87bcff);pointer-events:none;}
           .weather-scene.stormy .lightning-bolt {animation:bolt-strike 5s linear infinite;}
           .weather-scene.stormy .lightning-bolt.bolt-second {animation-delay:-2.5s;}
-          @keyframes bolt-strike {0%,10%,21%,23%,100%{opacity:0}11%,15%,18%,20%{opacity:1}}
+          @keyframes bolt-strike {0%,10%,11%,13%,14%,100%{opacity:0}10.2%,13.2%{opacity:1}}
 
           .weather-scene.rainy .weather-rain-sprite,.weather-scene.pouring .weather-rain-sprite,.weather-scene.stormy .weather-rain-sprite {display:block;}
           .weather-scene.stormy .weather-rain-sprite {opacity:1;}
