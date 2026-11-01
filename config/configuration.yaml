@@ -12,7 +12,6 @@ modbus: !include_dir_merge_list modbus/
 utility_meter: !include utility_meter.yaml
 template: !include template.yaml
 group: !include group.yaml
-em_dashboard_layout:
 
 homeassistant:
   packages: !include_dir_named integrations
