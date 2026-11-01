@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import re
 import json
 import os
 from pathlib import Path
@@ -16,6 +18,8 @@ DOMAIN = "em_dashboard_layout"
 CONFIG_SCHEMA = vol.Schema({vol.Optional(DOMAIN): vol.Schema({})}, extra=vol.ALLOW_EXTRA)
 MAX_BYTES = 300_000
 MAX_PROFILES = 20
+PROFILE_DIRECTORY = Path(".energy_manager/layout_profiles")
+
 
 
 def _default_state() -> dict:
@@ -23,28 +27,83 @@ def _default_state() -> dict:
             "profiles": {"everyday": {"name": "Everyday", "cards": {}}}}
 
 
+def _load_bundled_profiles(path: Path, data: dict) -> tuple[dict, bool]:
+    """Seed bundled JSON profiles once; never replace a user's edited profile.
+
+    JSON files are read from /config/.energy_manager/layout_profiles/. A newly
+    deployed file is introduced as a profile. Bundled IDs are stable filenames.
+    """
+    folder = path.parent / "layout_profiles"
+    if not folder.is_dir():
+        return data, False
+    profiles = data["profiles"]
+    seen = data.setdefault("bundled_profile_ids", [])
+    if not isinstance(seen, list):
+        raise ValueError("Invalid bundled profile tracking")
+    changed = False
+    added_v2 = False
+    for f in sorted(folder.glob("*.json"), key=lambda f: (f.stem != "v2", f.name)):
+        if not re.fullmatch(r"[a-zA-Z0-9_-]{1,40}", f.stem):
+            continue
+        key = "bundled-" + f.stem
+        if key in seen:
+            continue
+        if f.stat().st_size > MAX_BYTES:
+            raise ValueError(f"Bundled profile too large: {f.name}")
+        template = json.loads(f.read_text(encoding="utf-8"))
+        if not isinstance(template, dict):
+            raise ValueError(f"Invalid bundled profile: {f.name}")
+        cards = template.get("cards")
+        # Accept the existing Export Layout JSON format unchanged.
+        if not isinstance(cards, dict):
+            raise ValueError(f"No cards object in bundled profile: {f.name}")
+        cards = _sanitize_cards(cards)
+        name = template.get("name", f.stem)
+        if not isinstance(name, str) or not 1 <= len(name.strip()) <= 50:
+            raise ValueError(f"Invalid profile name in {f.name}")
+        if len(profiles) >= MAX_PROFILES and key not in profiles:
+            raise ValueError("Too many bundled profiles")
+        # Avoid silently overwriting a user-created profile with a matching ID.
+        if key not in profiles:
+            profiles[key] = {"name": name.strip(), "cards": cards}
+            changed = True
+            if f.stem == "v2":
+                added_v2 = True
+        seen.append(key)
+        changed = True
+    if added_v2:
+        data["active_profile"] = "bundled-v2"
+    if changed:
+        data["revision"] += 1
+        _ensure_size(data)
+    return data, changed
+
+
 def _read(path: Path) -> dict:
     if not path.exists():
-        return _default_state()
-    data = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(data, dict):
-        raise ValueError("Invalid dashboard layout file")
-    if isinstance(data.get("profiles"), dict):
-        profiles = data["profiles"]
-        active = data.get("active_profile")
-        if not profiles or active not in profiles:
-            raise ValueError("Invalid dashboard profile data")
-        for profile in profiles.values():
-            if not isinstance(profile, dict) or not isinstance(profile.get("name"), str) or not isinstance(profile.get("cards"), dict):
-                raise ValueError("Invalid dashboard profile")
-        return data
-    # Transparently migrate the v6 shared layout without changing the existing file
-    # until the first successful write. The existing preferences become Everyday.
-    if not isinstance(data.get("cards"), dict):
-        raise ValueError("Invalid legacy dashboard layout")
-    return {"version": 7, "revision": int(data.get("revision", 0)),
-            "active_profile": "everyday",
-            "profiles": {"everyday": {"name": "Everyday", "cards": data["cards"]}}}
+        data = _default_state()
+    else:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            raise ValueError("Invalid dashboard layout file")
+        if isinstance(data.get("profiles"), dict):
+            profiles = data["profiles"]
+            active = data.get("active_profile")
+            if not profiles or active not in profiles:
+                raise ValueError("Invalid dashboard profile data")
+            for profile in profiles.values():
+                if not isinstance(profile, dict) or not isinstance(profile.get("name"), str) or not isinstance(profile.get("cards"), dict):
+                    raise ValueError("Invalid dashboard profile")
+        else:
+            if not isinstance(data.get("cards"), dict):
+                raise ValueError("Invalid legacy dashboard layout")
+            data = {"version": 7, "revision": int(data.get("revision", 0)),
+                    "active_profile": "everyday",
+                    "profiles": {"everyday": {"name": "Everyday", "cards": data["cards"]}}}
+    data, updated = _load_bundled_profiles(path, data)
+    if updated:
+        _write(path, data)
+    return data
 
 
 def _write(path: Path, data: dict) -> None:
@@ -211,6 +270,8 @@ async def ws_profile(hass, connection, msg):
                     raise ValueError("Profile name already exists")
                 profiles[pid]["name"] = name
             elif action == "delete":
+                if pid in data.get("bundled_profile_ids", []):
+                    raise ValueError("Bundled profiles cannot be deleted from the dashboard")
                 if pid not in profiles:
                     raise ValueError("Unknown profile")
                 if len(profiles) == 1:
