@@ -1,17 +1,27 @@
-/* Energy Manager v7.2.4 */
+/* Energy Manager Layout Manager v7.3.9 */
 (() => {
   const TAG = 'energy-manager-layout';
   if (customElements.get(TAG)) return;
   const CSS = `
 energy-manager-layout{display:block;min-width:0}energy-manager-layout *{box-sizing:border-box}
 energy-manager-layout .em-toolbar{display:flex;gap:7px;align-items:center;justify-content:flex-end;flex-wrap:wrap;margin:7px 0 12px}
+energy-manager-layout .em-profile-select{max-width:180px;min-width:100px;border-radius:6px;padding:5px 6px;background:var(--card-background-color,var(--ha-card-background,#242424));color:var(--primary-text-color);border:1px solid var(--divider-color,#666)}
 energy-manager-layout .em-status{font-size:12px;opacity:.75;margin-right:auto}
 energy-manager-layout button{font:inherit;background:var(--card-background-color,var(--ha-card-background,#242424));color:var(--primary-text-color);border:1px solid var(--divider-color,#666);border-radius:6px;padding:5px 9px;cursor:pointer}
 energy-manager-layout button:disabled{opacity:.4;cursor:default}
 energy-manager-layout .em-error{color:var(--error-color,#ef5350);font-size:13px}
 energy-manager-layout .em-picker{border:1px solid var(--divider-color,#666);border-radius:9px;padding:12px;margin-bottom:12px}
-energy-manager-layout .em-options{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:9px;margin-top:10px}
-energy-manager-layout .em-option{display:flex;gap:7px;align-items:center;font-size:13px}
+energy-manager-layout .em-picker-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:12px 0}
+energy-manager-layout .em-device-tabs{display:flex;gap:4px;background:var(--secondary-background-color,#282828);padding:4px;border-radius:8px}
+energy-manager-layout .em-device-tabs button{border:0;background:transparent;border-radius:6px;min-width:80px}
+energy-manager-layout .em-device-tabs button[aria-pressed="true"]{background:var(--primary-color,#03a9f4);color:var(--text-primary-color,#fff);font-weight:600}
+energy-manager-layout .em-card-search{flex:1 1 180px;max-width:330px;min-width:130px;background:var(--card-background-color,var(--ha-card-background,#242424));border:1px solid var(--divider-color,#666);border-radius:6px;color:var(--primary-text-color);padding:7px 10px;font:inherit}
+energy-manager-layout .em-options{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:7px;margin-top:10px}
+energy-manager-layout .em-option{display:flex;align-items:center;gap:8px;border:1px solid var(--divider-color,#555);border-radius:7px;padding:9px 10px;min-width:0;cursor:pointer}
+energy-manager-layout .em-option[hidden]{display:none}
+energy-manager-layout .em-option-name{flex:1;min-width:0;font-size:13px}
+energy-manager-layout .em-option input{margin:0;flex-shrink:0}
+energy-manager-layout .em-option.em-required{opacity:.7;cursor:default}
 energy-manager-layout .em-column-notices{display:flex;flex-direction:column;gap:9px;min-width:0}
 energy-manager-layout .em-column-notices>*{display:block;min-width:0;width:100%}
 energy-manager-layout .em-columns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;align-items:start}
@@ -23,6 +33,8 @@ energy-manager-layout .em-edithead{display:none;align-items:center;gap:4px;font-
 energy-manager-layout .em-editing .em-edithead{display:flex}
 energy-manager-layout .em-title{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;font-weight:600}
 energy-manager-layout .em-grip{cursor:grab;touch-action:none;font-size:16px;padding:1px 5px}
+energy-manager-layout .em-grip.em-locked{cursor:not-allowed;opacity:.35}
+energy-manager-layout .em-edithead button.em-locked-button{background:var(--secondary-background-color,#303030);font-weight:600}
 energy-manager-layout .em-edithead button{padding:2px 5px;font-size:12px;min-width:25px}
 energy-manager-layout .em-tile.em-dragging{opacity:.4}
 energy-manager-layout .em-width-handle{display:none;position:absolute;right:-5px;top:30px;bottom:0;width:12px;z-index:4;cursor:ew-resize;touch-action:none;align-items:center;justify-content:center}
@@ -42,7 +54,7 @@ energy-manager-layout .em-hint{font-size:12px;opacity:.75;margin-top:9px}
   const el=(tag,cls='',value)=>{const node=document.createElement(tag);if(cls)node.className=cls;if(value!==undefined)node.textContent=value;return node;};
   const button=(label,fn)=>{const node=el('button','',label);node.type='button';node.addEventListener('click',fn);return node;};
   class Layout extends HTMLElement {
-    constructor(){super();this._config=null;this._configs=[];this._elements=[];this._layout={};this._hass=null;this._rev=0;this._editing=false;this._picker=false;this._busy=false;this._dirty=false;this._error='';this._generation=0;this._eligibility='';this._drag=null;}
+    constructor(){super();this._config=null;this._configs=[];this._elements=[];this._layout={};this._hass=null;this._rev=0;this._editing=false;this._picker=false;this._pickerDevice='desktop';this._pickerSearch='';this._busy=false;this._dirty=false;this._error='';this._generation=0;this._eligibility='';this._drag=null;this._profiles=[{id:'everyday',name:'Everyday'}];this._activeProfile='everyday';this._profileBusy=false;this._histories=new Map();this._historyLimit=40;this._device=this._deviceClass();this._onViewportChange=()=>{const next=this._deviceClass();if(next!==this._device){this._device=next;this._render();}};}
     setConfig(config){this._config=config;this._configs=config.cards||[];this._layout={};this._render();if(this._hass)this._fetch();}
     set cards(cards){const next=cards||[];const changed=next.length!==this._elements.length||next.some((v,i)=>v!==this._elements[i]);this._elements=next;if(changed)this._render();}
     get cards(){return this._elements;}
@@ -50,14 +62,43 @@ energy-manager-layout .em-hint{font-size:12px;opacity:.75;margin-top:9px}
     get hass(){return this._hass;}
     set narrow(value){this._narrow=value;}
     get narrow(){return this._narrow;}
-    connectedCallback(){this._render();}
+    connectedCallback(){window.addEventListener('resize',this._onViewportChange);this._device=this._deviceClass();this._render();}
+    disconnectedCallback(){window.removeEventListener('resize',this._onViewportChange);}
+    _deviceClass(){const w=window.innerWidth;return w<=590?'mobile':w<=900?'tablet':'desktop';}
+    _deviceHidden(state){return state.locked&&state.lock_device===this._device?false:state.hidden||state.hidden_devices.includes(this._device);}
     _meta(i){const o=this._configs[i]?.view_layout||{};return{id:String(o.em_id||`card-${i}`),name:String(o.em_name||`Card ${i+1}`),fixed:!!o.em_fixed,required:!!o.em_required,defaultColumn:Math.max(0,Math.min(2,Number(o.em_column??i%3))),defaultOrder:Number(o.em_order??i)};}
     _eligible(i){const card=this._configs[i];if(card?.type!=='conditional'||!Array.isArray(card.conditions))return true;if(!this._hass?.states)return false;return card.conditions.every(rule=>{const state=this._hass.states[rule.entity]?.state;if(state===undefined)return false;const values=v=>(Array.isArray(v)?v:[v]).map(String);return(rule.state===undefined||values(rule.state).includes(state))&&(rule.state_not===undefined||!values(rule.state_not).includes(state));});}
     _eligibilitySignature(){return this._configs.map((_,i)=>this._eligible(i)?'1':'0').join('');}
     _defaultWidth(i){const v=Number(this._configs[i]?.view_layout?.em_width);return Number.isInteger(v)?Math.max(1,Math.min(12,v)):12;}
-    _state(i){const m=this._meta(i),s=this._layout[m.id]||{};const col=Number.isInteger(s.col)?s.col:m.defaultColumn;const order=Number.isInteger(s.order)?s.order:m.defaultOrder;return{col:Math.max(0,Math.min(2,col)),order, width:(Number.isInteger(s.width)&&s.width>=1&&s.width<=12?s.width:this._defaultWidth(i)),hidden:!m.required&&(typeof s.hidden==='boolean'?s.hidden:this._configs[i]?.view_layout?.em_hidden===true)};}
+    _state(i){const m=this._meta(i),s=this._layout[m.id]||{};const col=Number.isInteger(s.col)?s.col:m.defaultColumn;const order=Number.isInteger(s.order)?s.order:m.defaultOrder;return{col:Math.max(0,Math.min(2,col)),order, width:(Number.isInteger(s.width)&&s.width>=1&&s.width<=12?s.width:this._defaultWidth(i)),hidden:!m.required&&(typeof s.hidden==='boolean'?s.hidden:this._configs[i]?.view_layout?.em_hidden===true),hidden_devices:!m.required&&Array.isArray(s.hidden_devices)?s.hidden_devices.filter(v=>['desktop','tablet','mobile'].includes(v)):[],locked:typeof s.locked==='boolean'?s.locked:this._configs[i]?.view_layout?.em_locked===true,lock_device:['desktop','tablet','mobile'].includes(s.lock_device)?s.lock_device:null};}
     _eligibleItems(){return this._configs.map((_,i)=>i).filter(i=>!this._meta(i).fixed&&this._eligible(i));}
-    _ordered(col,includeHidden=false){return this._eligibleItems().filter(i=>{const s=this._state(i);return s.col===col&&(includeHidden||!s.hidden);}).sort((a,b)=>this._state(a).order-this._state(b).order||a-b);}
+    _ordered(col,includeHidden=false){return this._eligibleItems().filter(i=>{const s=this._state(i);return s.col===col&&(includeHidden||!this._deviceHidden(s));}).sort((a,b)=>this._state(a).order-this._state(b).order||a-b);}
+    _history(){
+      if(!this._histories.has(this._activeProfile))this._histories.set(this._activeProfile,{undo:[],redo:[]});
+      return this._histories.get(this._activeProfile);
+    }
+    _snapshot(){return JSON.stringify(this._layout);}
+    _record(before){
+      const after=this._snapshot();
+      if(after===before)return false;
+      const history=this._history();
+      history.undo.push(before);
+      if(history.undo.length>this._historyLimit)history.undo.shift();
+      history.redo=[];
+      return true;
+    }
+    _travel(direction){
+      if(this._profileBusy)return;
+      const history=this._history();
+      const from=direction==='undo'?history.undo:history.redo;
+      const to=direction==='undo'?history.redo:history.undo;
+      if(!from.length)return;
+      to.push(this._snapshot());
+      if(to.length>this._historyLimit)to.shift();
+      this._layout=JSON.parse(from.pop());
+      this._render();
+      this._save();
+    }
     _scrollSnapshot(){
       const result=[]; const seen=new Set();
       const add=node=>{if(!node||seen.has(node))return;seen.add(node);if(typeof node.scrollTop==='number')result.push({node,top:node.scrollTop,left:node.scrollLeft});};
@@ -85,30 +126,90 @@ energy-manager-layout .em-hint{font-size:12px;opacity:.75;margin-top:9px}
       const scroll=this._scrollSnapshot();
       this.replaceChildren();const style=el('style');style.textContent=CSS;this.append(style);const root=el('div',this._editing?'em-editing':'');this.append(root);
       const toolbar=el('div','em-toolbar');root.append(toolbar);if(this._error)toolbar.append(el('span','em-status',this._error));
+      const selector=el('select','em-profile-select');selector.title='Active shared dashboard profile';selector.setAttribute('aria-label','Active dashboard profile');
+      for(const profile of this._profiles){const option=el('option','',profile.name);option.value=profile.id;option.selected=profile.id===this._activeProfile;selector.append(option);}
+      selector.disabled=this._busy||this._profileBusy||!this._hass?.user?.is_admin;
+      selector.addEventListener('change',()=>this._profileAction('activate',{profile_id:selector.value}));
+      toolbar.append(el('span','em-status','Layout:'));toolbar.append(selector);
+      if(this._editing){
+        toolbar.append(button('＋ New profile',()=>{const name=prompt('Name for the new layout profile:');if(name!==null&&name.trim())this._profileAction('create',{name:name.trim(),cards:this._payload()});}));
+        toolbar.append(button('✎ Rename',()=>{const current=this._profiles.find(p=>p.id===this._activeProfile);const name=prompt('Rename layout profile:',current?.name||'');if(name!==null&&name.trim())this._profileAction('rename',{profile_id:this._activeProfile,name:name.trim()});}));
+        const remove=button('✕ Delete profile',()=>{if(this._profiles.length>1&&confirm('Delete the selected layout profile? This cannot be undone.'))this._profileAction('delete',{profile_id:this._activeProfile});});
+        remove.disabled=this._profiles.length<=1;toolbar.append(remove);
+        const exportBtn=button('↓ Export layout',()=>this._exportLayout());
+        exportBtn.disabled=this._busy||this._profileBusy;toolbar.append(exportBtn);
+        const fileInput=el('input');fileInput.type='file';fileInput.accept='.json,application/json';fileInput.style.display='none';
+        fileInput.addEventListener('change',async()=>{const file=fileInput.files?.[0];fileInput.value='';if(file)await this._importLayout(file);});
+        toolbar.append(fileInput);
+        const importBtn=button('↑ Import layout',()=>fileInput.click());
+        importBtn.disabled=this._busy||this._profileBusy;toolbar.append(importBtn);
+      }
       const customise=button(this._editing?'✓ Finish customising':'✥ Customise',()=>{this._editing=!this._editing;this._render();});customise.disabled=!this._hass?.user?.is_admin;toolbar.append(customise);
       toolbar.append(button('☷ Show / hide',()=>{this._picker=!this._picker;this._render();}));
-      if(this._editing){toolbar.append(button('↺ Reset defaults',()=>{if(confirm('Restore the default arrangement and visibility of all optional cards?')){this._layout={};this._render();this._save();}}));toolbar.append(button('⟳ Reload saved',()=>{this._dirty=false;this._fetch();}));}
-      if(this._picker){const panel=el('div','em-picker');panel.append(el('strong','','Cards available on this system'));const options=el('div','em-options');for(const i of this._eligibleItems()){const m=this._meta(i),opt=el('label','em-option'),input=el('input');input.type='checkbox';input.checked=!this._state(i).hidden;input.disabled=m.required||!this._hass?.user?.is_admin;input.addEventListener('change',()=>{if(m.required)return;this._update(i,{hidden:!input.checked});});opt.append(input,document.createTextNode(m.name+(m.required?' (always visible)':'')));options.append(opt);}panel.append(options);root.append(panel);}
+      if(this._editing){
+        const history=this._history();
+        const undo=button('↶ Undo',()=>this._travel('undo'));undo.disabled=!history.undo.length||this._profileBusy;toolbar.append(undo);
+        const redo=button('↷ Redo',()=>this._travel('redo'));redo.disabled=!history.redo.length||this._profileBusy;toolbar.append(redo);
+        toolbar.append(button('↺ Reset defaults',()=>{if(this._profileBusy)return;if(confirm('Restore the default arrangement and visibility of all optional cards?')){const before=this._snapshot();this._layout={};if(this._record(before)){this._render();this._save();}}}));
+        toolbar.append(button('⟳ Reload saved',()=>{if(this._busy||this._profileBusy)return;this._dirty=false;this._histories.delete(this._activeProfile);this._fetch();}));
+      }
+      if(this._picker){
+        const panel=el('div','em-picker');panel.append(el('strong','','Card visibility'));
+        panel.append(el('p','em-hint','Choose a device to edit its visibility. Settings are saved per profile and shared by all devices. Desktop >900px · Tablet 591–900px · Mobile ≤590px.'));
+        const controls=el('div','em-picker-toolbar'),tabs=el('div','em-device-tabs');
+        const currentDevice=this._pickerDevice;
+        for(const device of ['desktop','tablet','mobile']){
+          const tab=button(device.charAt(0).toUpperCase()+device.slice(1),()=>{this._pickerDevice=device;this._render();});
+          tab.setAttribute('aria-pressed',String(device===currentDevice));
+          tabs.append(tab);
+        }
+        controls.append(tabs);
+        const search=el('input','em-card-search');search.type='search';search.placeholder='Search cards…';search.setAttribute('aria-label','Search cards');search.value=this._pickerSearch;
+        controls.append(search);panel.append(controls);
+        const options=el('div','em-options'),entries=[];
+        for(const i of this._eligibleItems()){
+          const m=this._meta(i),state=this._state(i),opt=el('label','em-option'),input=el('input');
+          const visible=m.required||(state.locked&&state.lock_device===currentDevice)||(!state.hidden&&!state.hidden_devices.includes(currentDevice));
+          input.type='checkbox';input.checked=visible;input.disabled=m.required||(state.locked&&state.lock_device===currentDevice)||!this._hass?.user?.is_admin;
+          if(m.required||(state.locked&&state.lock_device===currentDevice))opt.classList.add('em-required');
+          input.addEventListener('change',()=>{
+            if(m.required||(this._state(i).locked&&this._state(i).lock_device===currentDevice))return;
+            const latest=this._state(i);
+            const all=['desktop','tablet','mobile'];
+            let hiddenDevices=latest.hidden?all.filter(d=>d!==currentDevice):[...latest.hidden_devices];
+            if(input.checked)hiddenDevices=hiddenDevices.filter(d=>d!==currentDevice);
+            else if(!hiddenDevices.includes(currentDevice))hiddenDevices.push(currentDevice);
+            // Keep the old global hidden flag for legacy exports, but use the
+            // per-device exclusions for edits in the new picker.
+            this._update(i,{hidden:false,hidden_devices:hiddenDevices},currentDevice);
+          });
+          opt.append(input,el('span','em-option-name',m.name+(m.required?' (always visible)':state.locked&&state.lock_device===currentDevice?' (locked here)':'')));
+          options.append(opt);entries.push({opt,name:m.name.toLocaleLowerCase()});
+        }
+        const filter=()=>{const q=this._pickerSearch.trim().toLocaleLowerCase();for(const entry of entries)entry.opt.hidden=!!q&&!entry.name.includes(q);};
+        search.addEventListener('input',()=>{this._pickerSearch=search.value;filter();});filter();
+        panel.append(options);root.append(panel);
+      }
       // Fixed notifications are not movable or hideable, but belong to their
       // configured main column. em_width is measured within that column.
       const columns=el('div','em-columns');root.append(columns);for(let col=0;col<3;col++){const column=el('div','em-column');column.dataset.column=String(col);columns.append(column);
         const fixed=this._configs.map((_,i)=>i).filter(i=>{const m=this._meta(i);return m.fixed&&m.defaultColumn===col&&this._eligible(i);}).sort((a,b)=>this._meta(a).defaultOrder-this._meta(b).defaultOrder||a-b);
         if(fixed.length){const noticeArea=el('div','em-column-notices');column.append(noticeArea);for(const i of fixed){const tile=el('div','em-row'),slot=el('div','em-card');slot.style.gridColumn=`span ${this._defaultWidth(i)}`;slot.append(this._elements[i]);tile.append(slot);noticeArea.append(tile);}}
         const items=this._ordered(col);let row=[],used=0;
-        const flush=()=>{if(!row.length)return;const rowEl=el('div','em-row');rowEl.dataset.column=String(col);rowEl.dataset.before=String(row[0]);for(const idx of row){const state=this._state(idx),m=this._meta(idx),tile=el('div','em-tile');tile.style.gridColumn=`span ${state.width}`;tile.dataset.id=m.id;const head=el('div','em-edithead'),grip=el('span','em-grip','⠿');grip.title='Drag this card';grip.draggable=this._editing;head.append(grip,el('span','em-title',m.name));if(!m.required)head.append(button('Hide',()=>this._update(idx,{hidden:true})));const body=el('div','em-card');body.append(this._elements[idx]);tile.append(head,body);
-          if(this._editing){const handle=el('div','em-width-handle');handle.title='Drag horizontally to change width';handle.setAttribute('role','separator');handle.setAttribute('aria-label',`Resize ${m.name} horizontally`);tile.append(handle);this._wireResize(handle,tile,idx,col);}
+        const flush=()=>{if(!row.length)return;const rowEl=el('div','em-row');rowEl.dataset.column=String(col);rowEl.dataset.before=String(row[0]);for(const idx of row){const state=this._state(idx),m=this._meta(idx),tile=el('div','em-tile');tile.style.gridColumn=`span ${state.width}`;tile.dataset.id=m.id;const head=el('div','em-edithead'),grip=el('span','em-grip','⠿');grip.title=state.locked?'Unlock this card to move it':'Drag this card';grip.draggable=this._editing&&!state.locked;if(state.locked)grip.classList.add('em-locked');head.append(grip,el('span','em-title',m.name));if(this._editing){const lock=button(state.locked?'🔒 Locked':'🔓 Lock',()=>this._update(idx,{locked:!this._state(idx).locked,lock_device:this._state(idx).locked?null:this._device}));lock.title=state.locked?'Allow this card to be moved or resized':'Prevent moving and resizing this card';if(state.locked)lock.classList.add('em-locked-button');head.append(lock);}if(!m.required&&!(state.locked&&state.lock_device===this._device))head.append(button('Hide',()=>this._hideOnCurrentDevice(idx)));const body=el('div','em-card');body.append(this._elements[idx]);tile.append(head,body);
+          if(this._editing&&!state.locked){const handle=el('div','em-width-handle');handle.title='Drag horizontally to change width';handle.setAttribute('role','separator');handle.setAttribute('aria-label',`Resize ${m.name} horizontally`);tile.append(handle);this._wireResize(handle,tile,idx,col);}
           rowEl.append(tile);
-          if(this._editing){grip.addEventListener('dragstart',event=>{this._drag=idx;tile.classList.add('em-dragging');event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',m.id);});grip.addEventListener('dragend',()=>{tile.classList.remove('em-dragging');this._drag=null;});}
+          if(this._editing&&!state.locked){grip.addEventListener('dragstart',event=>{this._drag=idx;tile.classList.add('em-dragging');event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',m.id);});grip.addEventListener('dragend',()=>{tile.classList.remove('em-dragging');this._drag=null;});}
         }column.append(rowEl);if(this._editing)this._wireDrop(rowEl,col,row[0]);row=[];used=0;};
         for(const i of items){const w=this._state(i).width;if(used+w>12)flush();row.push(i);used+=w;if(used>=12)flush();}flush();if(this._editing){const bottom=el('div','em-drop-end','Drop here to place at bottom of column');column.append(bottom);this._wireDrop(bottom,col,null);}}
-      if(this._editing)root.append(el('p','em-hint','Drag ⠿ to move cards; drag the right-edge handle to resize widths. Heights follow content. Reset defaults restores YAML sizes.'));
+      if(this._editing)root.append(el('p','em-hint','Drag ⠿ to move cards; drag the right-edge handle to resize widths. Lock a card to protect its position and width; unlock it to edit. Undo and Redo apply to this profile only (up to 40 steps). Heights follow content.'));
       this._restoreScroll(scroll);
       // Restore again after HA has laid out the reinserted card elements.
       requestAnimationFrame(()=>this._restoreScroll(scroll));
     }
     _wireResize(handle,tile,i,col){
       handle.addEventListener('pointerdown',event=>{
-        if(event.button!==0)return;
+        if(event.button!==0||this._state(i).locked)return;
         event.preventDefault();event.stopPropagation();
         const row=tile.parentElement, original=this._state(i).width;
         const columnWidth=row.getBoundingClientRect().width;
@@ -142,21 +243,107 @@ energy-manager-layout .em-hint{font-size:12px;opacity:.75;margin-top:9px}
         handle.addEventListener('pointercancel',cancel);
       });
     }
-    _wireDrop(target,col,before){target.addEventListener('dragover',event=>{if(this._drag===null)return;event.preventDefault();event.dataTransfer.dropEffect='move';target.classList.add('em-target');});target.addEventListener('dragleave',()=>target.classList.remove('em-target'));target.addEventListener('drop',event=>{event.preventDefault();target.classList.remove('em-target');const i=this._drag;this._drag=null;if(i===null||i===before)return;this._move(i,col,before);});}
-    _move(i,col,before){const all=[0,1,2].map(c=>this._ordered(c,true));for(const arr of all){const at=arr.indexOf(i);if(at!==-1)arr.splice(at,1);}const dest=all[col];const pos=before===null?dest.length:dest.indexOf(before);dest.splice(pos<0?dest.length:pos,0,i);for(let c=0;c<3;c++)all[c].forEach((index,order)=>{const m=this._meta(index);this._layout[m.id]={...this._state(index),col:c,order};});this._render();this._save();}
-    _update(i,update){const m=this._meta(i);this._layout[m.id]={...this._state(i),...update};this._render();this._save();}
-    async _fetch(){if(!this._hass?.callWS)return;const generation=++this._generation;try{const response=await this._hass.callWS({type:'em_dashboard_layout/get'});if(generation!==this._generation||this._dirty)return;this._rev=response.revision||0;const cards=response.cards||{};this._layout={};for(const [id,s] of Object.entries(cards)){if(Number.isInteger(s.col)&&Number.isInteger(s.order)){this._layout[id]={col:s.col,order:s.order,hidden:s.hidden===true,...(Number.isInteger(s.width)&&s.width>=1&&s.width<=12?{width:s.width}:{})};}else if(s.hidden===true)this._layout[id]={hidden:true};}this._error='';this._render();}catch(e){this._error='Could not load shared layout: '+(e.message||e);this._render();}}
+    _wireDrop(target,col,before){target.addEventListener('dragover',event=>{if(this._drag===null||this._state(this._drag).locked)return;event.preventDefault();event.dataTransfer.dropEffect='move';target.classList.add('em-target');});target.addEventListener('dragleave',()=>target.classList.remove('em-target'));target.addEventListener('drop',event=>{event.preventDefault();target.classList.remove('em-target');const i=this._drag;this._drag=null;if(i===null||i===before||this._state(i).locked)return;this._move(i,col,before);});}
+    _move(i,col,before){if(this._profileBusy||this._state(i).locked)return;const snapshot=this._snapshot();const all=[0,1,2].map(c=>this._ordered(c,true));for(const arr of all){const at=arr.indexOf(i);if(at!==-1)arr.splice(at,1);}const dest=all[col];const pos=before===null?dest.length:dest.indexOf(before);dest.splice(pos<0?dest.length:pos,0,i);for(let c=0;c<3;c++){const previous=this._ordered(c,true).filter(idx=>this._state(idx).locked);for(const lockedIdx of previous){if(all[c].indexOf(lockedIdx)!==this._ordered(c,true).indexOf(lockedIdx))return;}}for(let c=0;c<3;c++)all[c].forEach((index,order)=>{const m=this._meta(index);this._layout[m.id]={...this._state(index),col:c,order};});if(this._record(snapshot)){this._render();this._save();}}
+    _hideOnCurrentDevice(i){const st=this._state(i);if(st.locked&&st.lock_device===this._device)return;const all=['desktop','tablet','mobile'];const hiddenDevices=st.hidden?all.filter(d=>d!==this._device):[...st.hidden_devices];if(!hiddenDevices.includes(this._device))hiddenDevices.push(this._device);this._update(i,{hidden:false,hidden_devices:hiddenDevices});}
+    _update(i,update,visibilityDevice=this._device){if(this._profileBusy||this._state(i).locked&&('width' in update||'col' in update||'order' in update))return;if(this._state(i).locked&&this._state(i).lock_device===visibilityDevice&&('hidden' in update||'hidden_devices' in update))return;const snapshot=this._snapshot();const m=this._meta(i);const next={...this._state(i),...update};if(update.locked===true){const current=this._device;const all=['desktop','tablet','mobile'];next.hidden_devices=next.hidden?all.filter(d=>d!==current):[...next.hidden_devices];next.hidden=false;next.hidden_devices=next.hidden_devices.filter(d=>d!==current);}if(next.locked&&next.lock_device){next.hidden_devices=next.hidden_devices.filter(d=>d!==next.lock_device);}
+      this._layout[m.id]=next;if(this._record(snapshot)){this._render();this._save();}}
+    _migrationSpecs(){
+      const specs=[];
+      for(let i=0;i<this._configs.length;i++){
+        const m=this._meta(i),v=this._configs[i]?.view_layout||{};
+        if(m.fixed)continue;
+        const aliases=[...(Array.isArray(v.em_previous_ids)?v.em_previous_ids:[]),...(typeof v.em_previous_id==='string'?[v.em_previous_id]:[])];
+        specs.push({id:m.id,col:m.defaultColumn,order:Math.max(0,Math.min(1000,Math.trunc(m.defaultOrder)||0)),width:this._defaultWidth(i),hidden:!m.required&&v.em_hidden===true,hidden_devices:[],required:m.required,locked:v.em_locked===true,aliases:[...new Set(aliases.filter(a=>typeof a==='string'&&a!==m.id))]});
+      }
+      return specs;
+    }
+    async _fetch(){if(!this._hass?.callWS)return;const generation=++this._generation;try{
+      let response=await this._hass.callWS({type:'em_dashboard_layout/get'});
+      // Migration is idempotent and server-side: all profiles update atomically.
+      // Non-admin viewers still see YAML defaults without changing saved data.
+      if(this._hass.user?.is_admin&&this._configs.length){
+        try{
+          const synced=await this._hass.callWS({type:'em_dashboard_layout/sync',revision:response.revision||0,specs:this._migrationSpecs()});
+          response=synced;
+        }catch(e){
+          // A simultaneous update may invalidate the revision. Reload the latest state
+          // rather than overwriting another administrator's changes.
+          response=await this._hass.callWS({type:'em_dashboard_layout/get'});
+          this._error='Layout migration could not be saved: '+(e.message||e);
+        }
+      }
+if(generation!==this._generation||this._dirty)return;this._rev=response.revision||0;this._profiles=Array.isArray(response.profiles)&&response.profiles.length?response.profiles:[{id:'everyday',name:'Everyday'}];this._activeProfile=response.active_profile||'everyday';const cards=response.cards||{};this._histories.clear();this._layout={};for(const [id,s] of Object.entries(cards)){if(Number.isInteger(s.col)&&Number.isInteger(s.order)){this._layout[id]={col:s.col,order:s.order,hidden:s.hidden===true,hidden_devices:Array.isArray(s.hidden_devices)?s.hidden_devices:[],locked:s.locked===true,lock_device:s.lock_device||null,...(Number.isInteger(s.width)&&s.width>=1&&s.width<=12?{width:s.width}:{})};}else if(s.hidden===true||Array.isArray(s.hidden_devices))this._layout[id]={hidden:s.hidden===true,hidden_devices:Array.isArray(s.hidden_devices)?s.hidden_devices:[],locked:s.locked===true,lock_device:s.lock_device||null};}this._error='';this._render();}catch(e){this._error='Could not load shared layout: '+(e.message||e);this._render();}}
+    async _profileAction(action,params){
+      if(this._busy||this._profileBusy){this._error='Finish saving the current layout first.';this._render();return;}
+      this._profileBusy=true;
+      try{
+        const response=await this._hass.callWS({type:'em_dashboard_layout/profile',action,revision:this._rev,...params});
+        this._rev=response.revision;this._profiles=response.profiles;this._activeProfile=response.active_profile;
+        if(action==='create')this._histories.delete(this._activeProfile);
+        if(action==='delete')for(const id of this._histories.keys())if(!this._profiles.some(p=>p.id===id))this._histories.delete(id);
+        this._layout={};for(const [id,s] of Object.entries(response.cards||{})){
+          if(Number.isInteger(s.col)&&Number.isInteger(s.order))this._layout[id]={col:s.col,order:s.order,hidden:s.hidden===true,hidden_devices:Array.isArray(s.hidden_devices)?s.hidden_devices:[],locked:s.locked===true,lock_device:s.lock_device||null,...(Number.isInteger(s.width)&&s.width>=1&&s.width<=12?{width:s.width}:{})};
+          else if(s.hidden===true||Array.isArray(s.hidden_devices))this._layout[id]={hidden:s.hidden===true,hidden_devices:Array.isArray(s.hidden_devices)?s.hidden_devices:[],locked:s.locked===true};
+        }
+        this._error='';
+      }catch(e){this._error='Profile change failed: '+(e.message||e);}
+      finally{this._profileBusy=false;this._render();}
+    }
+    _exportLayout(){
+      if(this._busy||this._profileBusy){this._error='Finish saving the layout before exporting.';this._render();return;}
+      const name=this._profiles.find(p=>p.id===this._activeProfile)?.name||'Everyday';
+      const data={format:'energy-manager-layout-profile',version:1,name,cards:this._payload()};
+      const blob=new Blob([JSON.stringify(data,null,2)+'\n'],{type:'application/json'});
+      const url=URL.createObjectURL(blob);
+      const link=el('a');
+      const safe=name.toLowerCase().normalize('NFKD').replace(/[^a-z0-9_-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,50)||'layout';
+      link.href=url;link.download=`energy-manager-layout-${safe}.json`;
+      document.body.append(link);link.click();link.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),1000);
+    }
+    async _importLayout(file){
+      if(this._busy||this._profileBusy){this._error='Finish saving the current layout before importing.';this._render();return;}
+      try{
+        if(file.size>150000)throw new Error('File is too large (150 KB maximum).');
+        const data=JSON.parse(await file.text());
+        if(!data||Array.isArray(data)||typeof data!=='object'||data.format!=='energy-manager-layout-profile'||data.version!==1||!data.cards||Array.isArray(data.cards)||typeof data.cards!=='object')
+          throw new Error('Not a supported Energy Manager layout export (format version 1).');
+        if(Object.keys(data.cards).length>500)throw new Error('Too many cards in layout file.');
+        const known=new Map(this._configs.map((_,i)=>[this._meta(i).id,this._meta(i)]));
+        const cards={};let ignored=0;
+        for(const [id,value] of Object.entries(data.cards)){
+          const meta=known.get(id);
+          if(!meta||meta.fixed){ignored++;continue;}
+          if(!value||Array.isArray(value)||typeof value!=='object'||(value.locked!==undefined&&typeof value.locked!=='boolean')||
+             !Number.isInteger(value.col)||value.col<0||value.col>2||
+             !Number.isInteger(value.order)||value.order<0||value.order>1000||
+             !Number.isInteger(value.width)||value.width<1||value.width>12||
+             typeof value.hidden!=='boolean'||(value.hidden_devices!==undefined&&(!Array.isArray(value.hidden_devices)||value.hidden_devices.some(v=>!['desktop','tablet','mobile'].includes(v)))))
+            throw new Error(`Invalid position, width or visibility for card: ${id}`);
+          cards[id]={col:value.col,order:value.order,width:value.width,hidden:meta.required?false:value.hidden,hidden_devices:meta.required?[]:[...new Set(value.hidden_devices||[])],locked:value.locked===true,lock_device:['desktop','tablet','mobile'].includes(value.lock_device)?value.lock_device:null};
+        }
+        if(!Object.keys(cards).length)throw new Error('No compatible cards were found in this layout.');
+        const suggested=String(data.name||'Imported layout').slice(0,50);
+        const input=prompt(`Import ${Object.keys(cards).length} cards as a new profile${ignored?` (${ignored} unavailable/fixed cards ignored)`:''}.\nName for the imported profile:`,suggested);
+        if(input===null)return;
+        const name=input.trim();
+        if(!name||name.length>50)throw new Error('Profile name must be 1–50 characters.');
+        // Only matched IDs are included. Any cards added later use their YAML defaults.
+        await this._profileAction('create',{name,cards});
+      }catch(e){this._error='Import failed: '+(e.message||e);this._render();}
+    }
     _payload(){
       const result={};
       for(let i=0;i<this._configs.length;i++){
         const m=this._meta(i);
         if(m.fixed)continue;
         const st=this._state(i);
-        result[m.id]={col:st.col,order:st.order,width:st.width,hidden:st.hidden};
+        result[m.id]={col:st.col,order:st.order,width:st.width,hidden:st.hidden,hidden_devices:st.hidden_devices,locked:st.locked,lock_device:st.lock_device};
       }
       return result;
     }
-    async _save(){this._dirty=true;if(this._busy)return;this._busy=true;while(this._dirty){this._dirty=false;try{const result=await this._hass.callWS({type:'em_dashboard_layout/save',cards:this._payload(),revision:this._rev});this._rev=result.revision;this._error='';}catch(e){this._error='Save failed: '+(e.message||e);break;}}this._busy=false;const status=this.querySelector('.em-status');if(status)status.textContent=this._error||'';else if(this._error)this._render();}
+    async _save(){this._dirty=true;if(this._busy)return;this._busy=true;while(this._dirty){this._dirty=false;try{const result=await this._hass.callWS({type:'em_dashboard_layout/save',cards:this._payload(),revision:this._rev,profile_id:this._activeProfile});this._rev=result.revision;this._error='';}catch(e){this._error='Save failed: '+(e.message||e);break;}}this._busy=false;const status=this.querySelector('.em-status');if(status)status.textContent=this._error||'';else if(this._error)this._render();}
   }
   customElements.define(TAG,Layout);
 })();
