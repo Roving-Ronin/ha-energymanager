@@ -1163,7 +1163,7 @@ views:
         em_width: 12
         em_name: Demand Period Active Notification
         em_column: 2
-        em_order: 13
+        em_order: 1
     - type: conditional
       conditions:
       - entity: input_select.electricity_provider
@@ -1220,7 +1220,7 @@ views:
         em_width: 12
         em_name: Flow Power PEA Watch
         em_column: 2
-        em_order: 1
+        em_order: 2
     - type: custom:modern-circular-gauge
       entity: sensor.solcast_pv_forecast_forecast_today
       gauge_foreground_style:
@@ -1329,7 +1329,7 @@ views:
         em_order: 4
     - type: custom:modern-circular-gauge
       entity: sensor.solcast_pv_forecast_forecast_day_3
-      name: Forecast Tomorrow
+      name: Forecast Day After Tomorrow
       gauge_foreground_style:
         color: adaptive
       gauge_background_style:
@@ -1371,7 +1371,7 @@ views:
         em_width: 4
         em_name: Forecast Day After Tomorrow
         em_column: 2
-        em_order: 2
+        em_order: 5
     - type: custom:state-switch
       entity: input_boolean.em_api_server
       states:
@@ -1524,7 +1524,7 @@ views:
         em_width: 12
         em_name: 24-hour energy plan
         em_column: 2
-        em_order: 5
+        em_order: 6
     - type: custom:state-switch
       entity: input_boolean.em_api_server
       states:
@@ -1594,7 +1594,7 @@ views:
         em_width: 12
         em_name: Price and Curtailment Forecast
         em_column: 2
-        em_order: 6
+        em_order: 7
     - type: custom:state-switch
       entity: binary_sensor.ocpp_active
       states:
@@ -1686,7 +1686,7 @@ views:
         em_width: 12
         em_name: EV Charging Forecast
         em_column: 2
-        em_order: 7
+        em_order: 8
     - type: entities
       title: System Status
       entities:
@@ -2030,7 +2030,7 @@ views:
         em_width: 12
         em_name: System Information
         em_column: 2
-        em_order: 8
+        em_order: 9
         em_hidden: true
     - type: entities
       title: Battery SOC Settings
@@ -2059,7 +2059,7 @@ views:
         em_width: 12
         em_name: Battery SoC Settings
         em_column: 2
-        em_order: 9
+        em_order: 10
         em_hidden: true
     - type: entities
       title: Power Settings
@@ -2118,7 +2118,7 @@ views:
         em_width: 12
         em_name: Power Settings
         em_column: 2
-        em_order: 10
+        em_order: 11
         em_hidden: true
     - type: entities
       title: Scheduled Charge
@@ -2168,7 +2168,7 @@ views:
         em_width: 12
         em_name: Scheduled Charge
         em_column: 2
-        em_order: 11
+        em_order: 12
         em_hidden: true
     - type: entities
       title: Power Status
@@ -2210,7 +2210,7 @@ views:
         em_width: 12
         em_name: Power Status
         em_column: 2
-        em_order: 12
+        em_order: 13
         em_hidden: true
     - type: entities
       title: Energy Today
@@ -2313,7 +2313,7 @@ views:
         em_width: 12
         em_name: Energy Today
         em_column: 2
-        em_order: 13
+        em_order: 14
         em_hidden: true
     - type: entities
       title: Inverter Settings
@@ -2485,7 +2485,7 @@ views:
         em_width: 12
         em_name: Inverter Settings
         em_column: 2
-        em_order: 14
+        em_order: 15
         em_hidden: true
     - daily_forecast_layout: vertical
       entity_extended: sensor.home_short_text_0
