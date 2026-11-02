@@ -9,7 +9,7 @@ import tempfile
 import urllib.parse
 import urllib.request
 
-REPOSITORY = os.environ.get('EM_UPDATE_REPOSITORY', 'saltpool/ha-energymanager')
+REPOSITORY = os.environ.get('EM_UPDATE_REPOSITORY', 'ha-energymanager/ha-energymanager')
 BRANCHES = ('main', 'early', 'test', 'development')
 SCRIPTS_DIR = Path('/config/scripts')
 
