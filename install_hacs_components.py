@@ -16,7 +16,7 @@ import shutil
 from pathlib import Path
 
 REPOSITORY = os.environ.get('EM_UPDATE_REPOSITORY', 'ha-energymanager/ha-energymanager')
-BRANCH = os.environ.get('EM_UPDATE_BRANCH', 'development')
+BRANCH = os.environ.get('EM_UPDATE_BRANCH', 'main')
 SCRIPTS = Path('/config/scripts')
 
 
