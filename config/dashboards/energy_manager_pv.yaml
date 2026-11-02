@@ -47,7 +47,7 @@ views:
         - type: markdown
           content: |
             ## 📢Version Announcement available
-            [Open information page](/energy-pv/5)
+            [Open information page](/energy-pv/6)
           card_mod:
             style: |
               ha-card {
