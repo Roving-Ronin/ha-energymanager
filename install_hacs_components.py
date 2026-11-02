@@ -15,7 +15,7 @@ from datetime import datetime
 import shutil
 from pathlib import Path
 
-REPOSITORY = os.environ.get('EM_UPDATE_REPOSITORY', 'saltpool/ha-energymanager')
+REPOSITORY = os.environ.get('EM_UPDATE_REPOSITORY', 'ha-energymanager/ha-energymanager')
 BRANCH = os.environ.get('EM_UPDATE_BRANCH', 'development')
 SCRIPTS = Path('/config/scripts')
 
