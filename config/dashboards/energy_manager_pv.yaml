@@ -2557,7 +2557,6 @@ views:
         em_column: 1
         em_order: 19
         em_hidden: true
-
     - daily_forecast_days: 4
       daily_forecast_layout: vertical
       entity_extended: sensor.home_extended_text_0
@@ -2627,6 +2626,63 @@ views:
         em_name: Weather Four Day Forecast
         em_column: 1
         em_order: 20
+        em_hidden: true
+    - type: custom:modern-circular-gauge
+      entity: sensor.inverter_battery_level
+      secondary: {}
+      name: Battery Level
+      smooth_segments: false
+      needle: false
+      show_state: true
+      start_from_zero: false
+      show_unit: true
+      unit_superscript: true
+      show_seconds: true
+      adaptive_state_color: false
+      adaptive_label_color: true
+      decimals: 0
+      inverted_mode: false
+      show_in_graph: true
+      adaptive_graph_range: false
+      needle_config: {}
+      gauge_foreground_style:
+        width: 6
+        opacity: 1
+      adaptive_icon_color: true
+      icon_entity: primary
+      gauge_type: standard
+      segments:
+        - color:
+            - 255
+            - 0
+            - 0
+          from: 0
+        - from: 20
+          color:
+            - 254
+            - 126
+            - 6
+        - from: 40
+          color:
+            - 255
+            - 221
+            - 0
+        - from: 60
+          color:
+            - 0
+            - 76
+            - 255
+        - from: 80
+          color:
+            - 68
+            - 255
+            - 0
+      view_layout:
+        em_id: battery-level
+        em_width: 4
+        em_name: Battery Level
+        em_column: 2
+        em_order: 16
         em_hidden: true
   - type: sections
     max_columns: 3
