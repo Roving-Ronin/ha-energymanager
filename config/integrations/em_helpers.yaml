@@ -343,6 +343,19 @@ input_select:
       - "Percentage"
     icon: mdi:battery-charging
 
+  em_ev_brand:
+    name: EV Brand
+    options:
+      - "Other"
+      - "BYD"
+      - "Chery"
+      - "Geely"
+      - "Jaecoo"
+      - "Kia"
+      - "MG"
+      - "Tesla"
+      - "Zeekr"
+
   energy_profile_slot:
     name: Energy Profile Slot
     options:
