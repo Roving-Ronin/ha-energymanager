@@ -254,6 +254,24 @@ def migrate():
         if path.endswith('.py'):
             compile(content.decode('utf-8'), path, 'exec')
     validate_helpers(payloads['integrations/em_helpers.yaml'])
+
+    print('Checking Marketplace readiness and authorisation...', flush=True)
+    with tempfile.TemporaryDirectory(prefix='em-migration-marketplace-') as temp_dir:
+        marketplace_script = Path(temp_dir) / 'marketplace_manager.py'
+        marketplace_script.write_bytes(payloads['scripts/marketplace_manager.py'])
+        result = subprocess.run(
+            [
+                sys.executable, str(marketplace_script),
+                '--preflight', '--consent', '--github-auth',
+            ],
+            check=False,
+        )
+        if result.returncode != 0:
+            raise RuntimeError(
+                'Marketplace preflight failed. Migration has not modified any files.'
+            )
+    print('Marketplace authorisation verified.', flush=True)
+    
     cli('core', 'check')
     print(f'Downloads validated from {BRANCH}@{sha[:12]}. Stopping Home Assistant Core...', flush=True)
     was_started = True
