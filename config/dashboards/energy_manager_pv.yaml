@@ -653,12 +653,7 @@ views:
       bar_effect: []
       hide: []
       alert_when:
-        below:
-          jinja: >
-            {% set capacity = states("input_number.battery_capacity")|float(0) %}
-            {{ capacity * 0.2 }}
         highlight: background
-        color: red
       frameless: false
       marginless: false
       icon: mdi:battery-arrow-up
@@ -690,10 +685,6 @@ views:
       hide: []
       alert_when:
         highlight: background
-        above:
-          jinja: >-
-            {% set capacity = states("input_number.battery_capacity")|float(0) %}
-            {{ capacity * 0.8 }}
       frameless: false
       marginless: false
       name: Battery Discharge
@@ -841,12 +832,7 @@ views:
       bar_effect: []
       hide: []
       alert_when:
-        below:
-          jinja: >
-            {% set capacity = states("input_number.battery_capacity")|float(0) %}
-            {{ capacity * 0.2 }}
         highlight: background
-        color: red
       frameless: false
       marginless: false
       icon: mdi:solar-power-variant
