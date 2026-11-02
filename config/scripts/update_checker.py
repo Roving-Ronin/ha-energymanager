@@ -13,7 +13,7 @@ import urllib.request
 from pathlib import PurePosixPath
 from marketplace_manager import validate_components
 
-REPOSITORY = os.environ.get('EM_UPDATE_REPOSITORY', 'saltpool/ha-energymanager')
+REPOSITORY = os.environ.get('EM_UPDATE_REPOSITORY', 'ha-energymanager/ha-energymanager')
 VERSION_RE = re.compile(r'^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$')
 
 
