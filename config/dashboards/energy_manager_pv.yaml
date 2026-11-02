@@ -2204,7 +2204,7 @@ views:
         entities:
         - entity: sensor.inverter_battery_level
           name: Level
-          format: precision2
+          format: precision1
       view_layout:
         em_id: power-status
         em_width: 12
@@ -3138,7 +3138,7 @@ views:
                 entities:
                   - entity: sensor.inverter_battery_level
                     name: Level
-                    format: precision2
+                    format: precision1
           - type: entities
             title: Energy Today
             show_header_toggle: false
