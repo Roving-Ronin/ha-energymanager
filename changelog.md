@@ -1,13 +1,13 @@
 # Changelog
 
 <details open>
-<summary><strong>2.0.0 - 2026-11-xx</strong></summary>
+<summary><strong>2.0.0 - 2026-11-14</strong></summary>
 
 ### Added
 * New update method 
   * Now via Github allowing community submissions
   * Integration, Marketplace and App installation control and configuration
-  * Version control on integrations, HACS and App components
+  * Version control on integrations, Marketplace (ex HACS) and App components
   * Forced reboot after any update
   * Built in YAML syntax check
   * Bootstap deployment method - the ability to deploy EM to vanilla OS without requiring a restoration
@@ -22,7 +22,7 @@
 * New split news page. One column version specific, one for general information, and one for changelog
 * Safe-guard added for Flow Power users if EM tag detection file not present
 * All entities now YAML based (removal of UI entities via migration script)
-* Update script now manages HACS component addition/removal/forced version.
+* Update script now manages Marketplace component addition/removal/forced version.
 #### Changed
 * EV update - changed decisions to be made once per minute when EV is being charged. This gives a more granular reading for the solar_only and solar_preferred policies.
 * Sigenergy - EMS mode now on for self-consumption to fix issue found in firmware 116 & 117
