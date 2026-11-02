@@ -66,7 +66,7 @@ def prepare():
 
     if importlib.util.find_spec('requests') is None:
         log('Installing missing Python requests dependency')
-        run([sys.executable, '-m', 'pip', 'install', 'requests'])
+        run([sys.executable, '-m', 'pip', 'install', '--root-user-action=ignore', 'requests'])
     else:
         log('Python requests dependency available')
 
