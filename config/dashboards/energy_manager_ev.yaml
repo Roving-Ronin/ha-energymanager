@@ -270,6 +270,7 @@ views:
             title: General Settings
             entities:
               - entity: input_number.em_ev_battery_capacity_kwh
+              - entity: input_select.em_ev_brand
               - entity: input_select.em_ev_battery_measurement
               - type: conditional
                 conditions:
