@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Perform Energy Manager Update v1.3.0 - Github branch updater
+Perform Energy Manager Update v2.0.0 - Github branch updater
 """
 import sys
 import os
@@ -13,6 +13,8 @@ import uuid
 import glob
 from datetime import datetime, timedelta
 import argparse
+import urllib.request
+import urllib.error
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Energy Manager Update Script')
@@ -21,18 +23,342 @@ def parse_arguments():
     parser.add_argument('--key', default='', help=argparse.SUPPRESS)
     return parser.parse_args()
 
-try:
-    import requests
-    REQUESTS_AVAILABLE = True
-except ImportError:
-    REQUESTS_AVAILABLE = False
-    print("⚠ requests module not available - some features may not work")
-
 sys.path.append('/config/scripts')
 
 from update_checker import EnergyManagerUpdateChecker, version_tuple
 from file_merger import EnergyManagerFileMerger
-from hacs_manager import sync_hacs_components_via_ssh
+from marketplace_manager import (
+    sync_marketplace_components_via_ssh,
+    require_marketplace,
+)
+
+def create_update_snapshot(manifest):
+    """Snapshot exactly the local files this update may modify."""
+    import shutil
+    import tempfile
+    from pathlib import Path
+
+    state = Path('/config/.energy_manager')
+    backup_root = state / 'backups'
+    backup_root.mkdir(parents=True, exist_ok=True)
+
+    paths = set()
+    for filepath in manifest['files']:
+        if filepath.startswith('/share/'):
+            paths.add(filepath)
+        else:
+            paths.add(str(Path('/config') / filepath))
+
+    # Files modified by legacy cleanup or update bookkeeping.
+    paths.update((
+        '/config/configuration.yaml',
+        '/config/automations.yaml',
+        '/config/scripts.yaml',
+        '/config/group.yaml',
+        '/config/template.yaml',
+        '/config/.energy_manager/managed-sections.json',
+        '/config/.energy_manager/version.txt',
+        '/config/.energy_manager/installed_branch.txt',
+        '/config/.energy_manager/post-reboot-status.json',
+    ))
+
+    snapshot_dir = Path(tempfile.mkdtemp(
+        prefix='update-rollback-',
+        dir=str(backup_root)
+    ))
+
+    records = []
+    try:
+        for index, filename in enumerate(sorted(paths)):
+            original = Path(filename)
+            if original.is_symlink():
+                raise RuntimeError(
+                    f'Refusing to snapshot symbolic link: {filename}'
+                )
+
+            existed = original.exists()
+            if existed and not original.is_file():
+                raise RuntimeError(
+                    f'Expected regular file: {filename}'
+                )
+
+            backup_name = str(index)
+            if existed:
+                shutil.copy2(original, snapshot_dir / backup_name)
+
+            records.append({
+                'path': filename,
+                'existed': existed,
+                'backup': backup_name if existed else None,
+            })
+
+        (snapshot_dir / 'snapshot.json').write_text(
+            json.dumps(records, indent=2) + '\n',
+            encoding='utf-8'
+        )
+
+        print(
+            f'Rollback snapshot created: {snapshot_dir}',
+            flush=True
+        )
+        return snapshot_dir
+
+    except Exception:
+        shutil.rmtree(snapshot_dir, ignore_errors=True)
+        raise
+
+
+def restore_update_snapshot(snapshot_dir):
+    """Restore only files recorded in the current attempt's snapshot."""
+    import filecmp
+    import shutil
+    import tempfile
+    from pathlib import Path
+
+    records = json.loads(
+        (snapshot_dir / 'snapshot.json').read_text(encoding='utf-8')
+    )
+
+    errors = []
+    restored = 0
+
+    for record in reversed(records):
+        path = Path(record['path'])
+        try:
+            if path.is_symlink():
+                raise RuntimeError('Destination became a symbolic link')
+
+            if record['existed']:
+                backup = snapshot_dir / record['backup']
+                if not backup.is_file():
+                    raise RuntimeError('Original snapshot file missing')
+
+                if path.is_file() and filecmp.cmp(
+                    backup, path, shallow=False
+                ):
+                    continue
+
+                path.parent.mkdir(parents=True, exist_ok=True)
+                fd, temp_name = tempfile.mkstemp(
+                    prefix='.em-restore-',
+                    dir=str(path.parent)
+                )
+                os.close(fd)
+                try:
+                    shutil.copy2(backup, temp_name)
+                    os.replace(temp_name, path)
+                finally:
+                    if os.path.exists(temp_name):
+                        os.unlink(temp_name)
+            else:
+                if path.exists():
+                    if not path.is_file():
+                        raise RuntimeError(
+                            'New destination is not a regular file'
+                        )
+                    path.unlink()
+
+            restored += 1
+            print(f'[EM Rollback] Restored {path}', flush=True)
+
+        except Exception as exc:
+            errors.append(f'{path}: {exc}')
+            print(f'[EM Rollback] ERROR {path}: {exc}', flush=True)
+
+    if errors:
+        raise RuntimeError(
+            'Rollback incomplete: ' + '; '.join(errors)
+        )
+
+    print(
+        f'[EM Rollback] Completed; {restored} files restored or removed',
+        flush=True
+    )
+
+def validate_home_assistant_config():
+    """Validate the deployed Home Assistant configuration without rebooting."""
+    import urllib.request
+    import urllib.error
+
+    token = (
+        os.environ.get('SUPERVISOR_TOKEN')
+        or os.environ.get('HASSIO_TOKEN')
+    )
+    if not token:
+        raise RuntimeError(
+            'Cannot validate Home Assistant configuration: Supervisor token missing'
+        )
+
+    print('Validating Home Assistant configuration before reboot...', flush=True)
+
+    request = urllib.request.Request(
+        'http://supervisor/core/check',
+        data=b'{}',
+        method='POST',
+        headers={
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+        }
+    )
+
+    try:
+        with urllib.request.urlopen(request, timeout=300) as response:
+            result = json.load(response)
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode('utf-8', errors='replace')
+        try:
+            payload = json.loads(detail)
+            detail = str(payload.get('message') or detail)
+        except ValueError:
+            pass
+        raise RuntimeError(
+            f'Home Assistant configuration validation failed '
+            f'(HTTP {exc.code}): {detail}'
+        ) from exc
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        raise RuntimeError(
+            f'Unable to validate Home Assistant configuration: {exc}'
+        ) from exc
+
+    if result.get('result') != 'ok':
+        raise RuntimeError(
+            'Home Assistant configuration validation failed: '
+            + str(result.get('message', result))
+        )
+
+    print('✅ Home Assistant configuration is valid', flush=True)
+    return True
+
+
+def prepare_post_update_reboot():
+    """Register post-reboot checks and arm the one-time update task."""
+    from pathlib import Path
+    import urllib.request
+
+    token = (
+        os.environ.get('SUPERVISOR_TOKEN')
+        or os.environ.get('HASSIO_TOKEN')
+    )
+    if not token:
+        raise RuntimeError('Supervisor token unavailable for reboot')
+
+    required_scripts = (
+        '/config/scripts/em_post_reboot.py',
+        '/config/scripts/configure_em_integrations.py',
+    )
+    for path in required_scripts:
+        if not os.path.isfile(path):
+            raise RuntimeError(
+                'Required post-reboot script missing: ' + path
+            )
+
+    def supervisor(method, endpoint, payload=None):
+        data = (
+            None if payload is None
+            else json.dumps(payload).encode('utf-8')
+        )
+        request = urllib.request.Request(
+            'http://supervisor/' + endpoint,
+            data=data,
+            method=method,
+            headers={
+                'Authorization': 'Bearer ' + token,
+                'Content-Type': 'application/json'
+            }
+        )
+        with urllib.request.urlopen(request, timeout=60) as response:
+            result = json.load(response)
+        if result.get('result') == 'error':
+            raise RuntimeError(
+                result.get('message', 'Supervisor request failed')
+            )
+        return result.get('data', result)
+
+    addon = 'addons/a0d7b954_ssh/'
+    info = supervisor('GET', addon + 'info')
+    options = dict(info.get('options') or {})
+    commands = list(options.get('init_commands') or [])
+
+    hook = (
+        "sh -c 'nohup python3 "
+        "/config/scripts/em_post_reboot.py > "
+        "/config/.energy_manager/post-reboot.log "
+        "2>&1 < /dev/null &'"
+    )
+
+    if hook not in commands:
+        commands.append(hook)
+        options['init_commands'] = commands
+        supervisor('POST', addon + 'options', {'options': options})
+
+    # Confirm that the SSH App retained the startup command.
+    verified = supervisor('GET', addon + 'info')
+    saved_commands = (
+        (verified.get('options') or {}).get('init_commands') or []
+    )
+    if hook not in saved_commands:
+        raise RuntimeError(
+            'SSH App did not retain the post-reboot startup hook'
+        )
+
+    state = Path('/config/.energy_manager')
+    state.mkdir(parents=True, exist_ok=True)
+    status = state / 'post-reboot-status.json'
+    temporary = state / 'post-reboot-status.json.tmp'
+
+    temporary.write_text(
+        json.dumps({
+            'status': 'pending',
+            'kind': 'update',
+            'detail': 'Waiting for Home Assistant OS reboot'
+        }) + '\n',
+        encoding='utf-8'
+    )
+    os.replace(temporary, status)
+
+    print('Post-reboot integration checks registered')
+    return token
+
+
+def reboot_home_assistant_os(token):
+    """Force a full Home Assistant OS reboot after successful update."""
+    import urllib.request
+    import urllib.error
+
+    request = urllib.request.Request(
+        'http://supervisor/host/reboot',
+        data=b'{}',
+        method='POST',
+        headers={
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+        }
+    )
+
+    print('Requesting full Home Assistant OS reboot...', flush=True)
+    try:
+        with urllib.request.urlopen(request, timeout=12) as response:
+            result = json.load(response)
+            if result.get('result') == 'error':
+                raise RuntimeError(
+                    'Supervisor refused OS reboot: '
+                    + str(result.get('message'))
+                )
+    except urllib.error.HTTPError as exc:
+        raise RuntimeError(
+            f'Supervisor refused OS reboot: HTTP {exc.code}'
+        ) from exc
+    except (TimeoutError, ConnectionError, urllib.error.URLError) as exc:
+        # Supervisor may disconnect while restarting the host.
+        print(
+            'Reboot request connection interrupted; '
+            'the host may already be rebooting: ' + str(exc),
+            flush=True
+        )
+        return
+
+    print('Home Assistant OS reboot requested successfully', flush=True)
+
 
 def cleanup_old_backups():
     try:
@@ -66,32 +392,37 @@ def cleanup_old_backups():
         print(f"⚠ Backup cleanup error: {e}")
 
 def supervisor_api_call(endpoint, method='GET', data=None):
-    if not REQUESTS_AVAILABLE:
-        print("❌ Cannot make API calls - requests module not available")
-        return False, {}
-
-    token = os.environ.get('SUPERVISOR_TOKEN', '')
+    token = (
+        os.environ.get('SUPERVISOR_TOKEN')
+        or os.environ.get('HASSIO_TOKEN')
+    )
     if not token:
+        print("Supervisor API unavailable: missing token")
         return False, {}
 
     url = f"http://supervisor/core/api/{endpoint}"
-    headers = {
-        'Authorization': 'Bearer ' + token,
-        'Content-Type': 'application/json'
-    }
-    
+    payload = (
+        json.dumps(data).encode('utf-8')
+        if data is not None else None
+    )
+
+    request = urllib.request.Request(
+        url,
+        data=payload,
+        method=method,
+        headers={
+            'Authorization': f'Bearer {token}',
+            'Content-Type': 'application/json'
+        }
+    )
+
     try:
-        if method == 'POST':
-            response = requests.post(url, headers=headers, json=data, timeout=30)
-        else:
-            response = requests.get(url, headers=headers, timeout=30)
-        
-        if response.status_code == 200:
-            return True, response.json() if response.text else {}
-        else:
-            return False, {}
-            
-    except Exception as e:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            content = response.read()
+            return True, json.loads(content) if content else {}
+    except (urllib.error.HTTPError, urllib.error.URLError,
+            TimeoutError, OSError, ValueError) as exc:
+        print(f"Supervisor API request failed ({endpoint}): {exc}")
         return False, {}
 
 def get_entity_state(entity_id):
@@ -174,19 +505,6 @@ def get_entity_state(entity_id):
     except Exception as e:
         pass
     
-    try:
-        url = f"http://127.0.0.1:8123/api/states/{entity_id}"
-        headers = {'Content-Type': 'application/json'}
-
-        response = requests.get(url, headers=headers, timeout=10)
-
-        if response.status_code == 200:
-            data = response.json()
-            return data
-
-    except Exception as e:
-        pass
-
     try:
         config_file = '/config/configuration.yaml'
         if os.path.exists(config_file):
@@ -431,6 +749,48 @@ def _merge_energy_manager_tabs(current_flows_str, new_flows_str, prefix='EnergyM
                     merged.append(d)
         existing_ids = {n.get('id') for n in merged}
         merged.extend([n for n in to_add if n.get('id') not in existing_ids])
+
+        global_configs = {
+            node['id']: node
+            for node in new
+            if isinstance(node, dict)
+            and node.get('id')
+            and not node.get('z')
+            and node.get('type') != 'tab'
+        }
+
+        def referenced_ids(value):
+            if isinstance(value, str):
+                if value in global_configs:
+                    yield value
+            elif isinstance(value, dict):
+                for child in value.values():
+                    yield from referenced_ids(child)
+            elif isinstance(value, list):
+                for child in value:
+                    yield from referenced_ids(child)
+
+        required = set()
+        pending = list(to_add)
+
+        while pending:
+            node = pending.pop()
+            for ref in referenced_ids(node):
+                if ref not in required:
+                    required.add(ref)
+                    pending.append(global_configs[ref])
+
+        existing_ids = {node.get('id') for node in merged}
+        added_configs = 0
+
+        for ref in sorted(required):
+            if ref not in existing_ids:
+                merged.append(global_configs[ref])
+                existing_ids.add(ref)
+                added_configs += 1
+
+        print(f'EM-merge: added {added_configs} missing configuration nodes')
+        
         try:
             print(f"EM-merge: removed {len(cur_em_tab_ids)} tabs; added {len(new_em_tab_ids)} tabs; result nodes={len(merged)}")
         except Exception:
@@ -453,18 +813,27 @@ def update_flows_via_ssh(flows_content, manifest_version):
     
     local_flows_file = '/config/.energy_manager/new_flows.json'
     try:
+        remote_str = _read_remote_text_via_ssh(
+            '/addon_configs/a0d7b954_nodered/flows.json'
+        )
+        if not remote_str:
+            raise RuntimeError(
+                'Cannot read existing Node-RED flows; refusing to overwrite'
+            )
+
+        merged_str = _merge_energy_manager_tabs(
+            remote_str,
+            flows_content,
+            prefix='EnergyManager-'
+        )
+        if merged_str is None:
+            raise RuntimeError(
+                'Node-RED flow merge failed; refusing to overwrite'
+            )
         with open(local_flows_file, 'w') as f:
-            flows_to_write = flows_content
-            try:
-                remote_str = _read_remote_text_via_ssh('/addon_configs/a0d7b954_nodered/flows.json')
-                if remote_str:
-                    merged_str = _merge_energy_manager_tabs(remote_str, flows_content, prefix='EnergyManager-')
-                    if merged_str:
-                        flows_to_write = merged_str
-                        print('Using selective EnergyManager- tab merge for flows.json')
-            except Exception:
-                pass
-            f.write(flows_to_write)
+            f.write(merged_str)
+
+        print('Using selective EnergyManager- tab merge for flows.json')
         
         source_size = os.path.getsize(local_flows_file)
         print(f"Source flows file: {source_size} bytes")
@@ -753,7 +1122,7 @@ def create_or_update_entity(entity_id, entity_config):
         
         success = False
         
-        if not success and REQUESTS_AVAILABLE:
+        if not success:
             try:
                 service_name = f"{entity_type}_set_value" if preserve_current and current_value else f"{entity_type}_create"
                 
@@ -953,15 +1322,18 @@ def handle_entities_update(manifest):
 
 def reload_home_assistant_config():
     try:
-        if REQUESTS_AVAILABLE:
-            success, response = supervisor_api_call('services/homeassistant/reload_config_entry', 'POST', {})
-            if success:
-                return True
-            
-            success, response = supervisor_api_call('services/homeassistant/restart', 'POST', {})
-            if success:
-                print("⚠ Full restart initiated instead of config reload")
-                return True
+        success, response = supervisor_api_call(
+            'services/homeassistant/reload_config_entry', 'POST', {}
+        )
+        if success:
+            return True
+
+        success, response = supervisor_api_call(
+            'services/homeassistant/restart', 'POST', {}
+        )
+        if success:
+            print("⚠ Full restart initiated instead of config reload")
+            return True
         
         return False
         
@@ -970,149 +1342,248 @@ def reload_home_assistant_config():
         return False
 
 def update_lovelace_resources(manifest):
-    print("=== Updating Lovelace Resources via SSH ===")
+    """Reconcile Lovelace resources using Home Assistant's WebSocket API."""
+    print("=== Reconciling Lovelace Resources ===")
 
-    resources_config = manifest.get('lovelace_resources')
+    resources_config = manifest.get('lovelace_resources') or []
 
     if not resources_config:
         print("No Lovelace resources to update")
         return True
 
-    if isinstance(resources_config, list):
-        resources = resources_config
-    elif isinstance(resources_config, dict):
-        values = list(resources_config.values())
-        if values and all(isinstance(v, dict) and 'url' in v for v in values):
-            resources = values
-        else:
-            resources = [resources_config]
-    else:
-        print(f"ERROR: lovelace_resources unexpected type {type(resources_config)}")
+    if not isinstance(resources_config, list):
+        print(
+            f"ERROR: lovelace_resources unexpected type "
+            f"{type(resources_config)}"
+        )
         return False
 
     try:
-        resources_file = '/config/.storage/lovelace_resources'
-        
-        existing_items = []
-        
-        read_cmd = [
-            'ssh', '-i', '/config/.energy_manager/ssh_key',
-            '-o', 'StrictHostKeyChecking=no',
-            '-o', 'BatchMode=yes',
-            f'hassio@a0d7b954-ssh.local.hass.io',
-            f'sudo cat {resources_file}'
-        ]
-        
-        try:
-            result = subprocess.run(read_cmd, capture_output=True, text=True, timeout=10)
-            if result.returncode == 0:
-                resources_data = json.loads(result.stdout)
-                existing_items = resources_data.get('data', {}).get('items', [])
-            else:
-                print(f"Warning: Failed to read existing resources via SSH: {result.stderr}")
-                resources_data = {
-                    "version": 1,
-                    "minor_version": 1,
-                    "key": "lovelace_resources",
-                    "data": {
-                        "items": []
-                    }
-                }
-        except (subprocess.TimeoutExpired, json.JSONDecodeError, FileNotFoundError) as e:
-            print(f"Could not retrieve existing Lovelace resources: {e}")
-            resources_data = {
-                "version": 1,
-                "minor_version": 1,
-                "key": "lovelace_resources",
-                "data": {
-                    "items": []
-                }
+        from marketplace_manager import HAWebSocket
+
+        with HAWebSocket() as ws:
+            existing_resources = ws.call('lovelace/resources/list')
+
+            if not isinstance(existing_resources, list):
+                raise RuntimeError(
+                    'Unexpected Lovelace resource registry response'
+                )
+
+            existing_by_url = {
+                item['url']: item
+                for item in existing_resources
+                if isinstance(item, dict) and item.get('url')
             }
 
-        
-        for i, resource in enumerate(resources):
-            if not isinstance(resource, dict):
-                print(f"ERROR: Resource {i} is not a dict, got {type(resource)}: {resource}")
-                continue
-            
-            url = resource.get('url')
-            resource_type = resource.get('type', 'module')
-            
-            if not url:
-                print("ERROR: Resource missing URL")
-                continue
-            
-            existing = next((item for item in existing_items if item.get('url') == url), None)
-            
-            if existing:
-                print(f"Resource {url} already exists, updating...")
-                existing['type'] = resource_type
-            else:
-                print(f"Adding new resource: {url}")
-                new_resource = {
-                    "id": str(uuid.uuid4()).replace('-', ''),
-                    "url": url,
-                    "type": resource_type
-                }
-                existing_items.append(new_resource)
-        
-        resources_data['version'] = 1
-        resources_data['minor_version'] = 1
+            added = 0
+            updated = 0
+            unchanged = 0
 
-        local_temp_file = '/config/.energy_manager/lovelace_resources_temp.json'
-        with open(local_temp_file, 'w') as f:
-            json.dump(resources_data, f, indent=2)
+            for resource in resources_config:
+                if not isinstance(resource, dict) or not resource.get('url'):
+                    raise RuntimeError(
+                        f'Invalid Lovelace resource: {resource!r}'
+                    )
 
-        print("Copying Lovelace resources to temp directory via SSH...")
-        copy_to_temp_cmd = [
-            'ssh', '-i', '/config/.energy_manager/ssh_key',
-            '-o', 'StrictHostKeyChecking=no',
-            '-o', 'BatchMode=yes',
-            f'hassio@a0d7b954-ssh.local.hass.io',
-            'cat > /tmp/lovelace_resources.json'
-        ]
-        
-        with open(local_temp_file, 'r') as f:
-            result = subprocess.run(copy_to_temp_cmd, input=f.read(), text=True, capture_output=True, timeout=30)
-        
-        if result.returncode != 0:
-            error_msg = f"Failed to copy resources to temp: {result.stderr}"
-            print(f"❌ {error_msg}")
-            update_dashboard_status(error_msg, "error")
-            return False
-            
-        print("✅ Lovelace resources copied to temp directory")
+                url = resource['url']
+                resource_type = resource.get('type', 'module')
+                existing = existing_by_url.get(url)
 
-        print("Moving Lovelace resources to .storage directory...")
-        move_cmd = [
-            'ssh', '-i', '/config/.energy_manager/ssh_key',
-            '-o', 'StrictHostKeyChecking=no',
-            '-o', 'BatchMode=yes',
-            f'hassio@a0d7b954-ssh.local.hass.io',
-            f'sudo mv /tmp/lovelace_resources.json {resources_file}'
-        ]
-        
-        result = subprocess.run(move_cmd, capture_output=True, text=True, timeout=15)
-        
-        if result.returncode != 0:
-            error_msg = f"Failed to move resources to final location: {result.stderr}"
-            print(f"❌ {error_msg}")
-            update_dashboard_status(error_msg, "error")
-            return False
-        
-        print(f"✅ Updated Lovelace resources with {len(resources)} items")
-        
-        if os.path.exists(local_temp_file):
-            os.remove(local_temp_file)
-            print("✅ Local temp file cleaned up")
-            
+                if existing is None:
+                    created = ws.call(
+                        'lovelace/resources/create',
+                        url=url,
+                        res_type=resource_type,
+                    )
+                    existing_by_url[url] = created
+                    print(f"Added Lovelace resource: {url}")
+                    added += 1
+
+                elif existing.get('type') != resource_type:
+                    ws.call(
+                        'lovelace/resources/update',
+                        resource_id=existing['id'],
+                        res_type=resource_type,
+                    )
+                    print(f"Updated Lovelace resource: {url}")
+                    updated += 1
+
+                else:
+                    print(f"Lovelace resource already correct: {url}")
+                    unchanged += 1
+
+        print(
+            f"✅ Lovelace resources reconciled: "
+            f"{added} added, {updated} updated, "
+            f"{unchanged} already correct"
+        )
         return True
-    
-    except Exception as e:
-        print(f"❌ Error updating Lovelace resources via SSH: {e}")
+
+    except Exception as exc:
+        print(f"❌ Lovelace resource reconciliation failed: {exc}")
         return False
 
+def cleanup_legacy_placeholder_files(file_merger, version):
+    import re
+    import os
+    from pathlib import Path
+
+    expected = {
+        'automations.yaml': (
+            'AUTOMATIONS',
+            '''- id: em_placeholder_do_not_remove
+  alias: "EM Placeholder (safe)"
+  description: "Keeps YAML list shape when there are no other automations."
+  initial_state: false
+  trigger:
+    - platform: homeassistant
+      event: start
+  condition: []
+  action: []
+  mode: single'''
+        ),
+        'scripts.yaml': (
+            'SCRIPTS',
+            '''# Moved to packages (integrations/em_scripts.yaml)
+
+em_placeholder_do_not_remove:
+  alias: "EM Placeholder (safe)"
+  sequence: []
+  mode: single'''
+        ),
+        'group.yaml': (
+            'GROUPS',
+            '''# Moved to packages (integrations/em_groups.yaml)
+
+em_placeholder_do_not_remove:
+  name: "EM Placeholder (safe)"
+  entities: []          # empty group; harmless and valid
+  icon: mdi:dots-horizontal'''
+        ),
+        'template.yaml': (
+            'TEMPLATES',
+            '''# Moved to packages (integrations/em_templates.yaml)
+
+- sensor:'''
+        ),
+    }
+
+    for filename, (section, expected_body) in expected.items():
+        path = Path('/config') / filename
+        if not path.is_file():
+            continue
+
+        original = path.read_text(encoding='utf-8')
+
+        pattern = re.compile(
+            r'^# === ENERGY_MANAGER_' + section +
+            r'_START v[\w.]+ ===\r?\n'
+            r'(?P<body>.*?)'
+            r'^# === ENERGY_MANAGER_' + section +
+            r'_END ===[ \t]*(?:\r?\n)?',
+            re.MULTILINE | re.DOTALL
+        )
+
+        match = pattern.search(original)
+        if not match:
+            continue
+
+        if match.group('body').strip() != expected_body.strip():
+            print(f'Preserving modified {filename} EM section')
+            continue
+
+        replacement = '- sensor:\n' if filename == 'template.yaml' else ''
+
+        updated = (
+            original[:match.start()]
+            + replacement
+            + original[match.end():]
+        )
+
+        if updated == original:
+            continue
+
+        if filename == 'automations.yaml' and not any(
+            line.strip() and not line.lstrip().startswith('#')
+            for line in updated.splitlines()
+        ):
+            updated = '[]\n'
+
+        if filename in ('scripts.yaml', 'group.yaml') and not any(
+            line.strip() and not line.lstrip().startswith('#')
+            for line in updated.splitlines()
+        ):
+            updated = '{}\n'
+
+        file_merger.create_backup(str(path), version)
+
+        temporary = path.with_name(path.name + '.em-cleanup')
+        try:
+            temporary.write_text(updated, encoding='utf-8')
+            os.replace(temporary, path)
+        finally:
+            temporary.unlink(missing_ok=True)
+
+        print(f'Removed legacy EM placeholder from {filename}')
+
+def cleanup_obsolete_em_sections(file_merger, version):
+    """Remove only known, unchanged, obsolete EM configuration sections."""
+    import re
+    from pathlib import Path
+
+    obsolete = {
+        'SHELL_COMMANDS',
+        'SENSORS',
+        'UPDATE_INPUTS',
+    }
+    path = Path('/config/configuration.yaml')
+    if not path.is_file():
+        return
+
+    original = path.read_text(encoding='utf-8')
+    updated = original
+
+    for section in obsolete:
+        pattern = (
+            r'(?m)^# === ENERGY_MANAGER_'
+            + section
+            + r'_START v[\w.]+ ===\r?\n'
+            + r'(?P<body>.*?)'
+            + r'^# === ENERGY_MANAGER_'
+            + section
+            + r'_END ===[ \t]*(?:\r?\n)?'
+        )
+
+        def remove_if_obsolete(match):
+            body = match.group('body').strip()
+            if body == '# (moved)':
+                print(f'Removing obsolete EM section: {section}')
+                return ''
+            print(f'Preserving modified EM section: {section}')
+            return match.group(0)
+
+        updated = re.sub(
+            pattern, remove_if_obsolete, updated,
+            flags=re.MULTILINE | re.DOTALL
+        )
+
+    if updated != original:
+        file_merger.create_backup(str(path), version)
+        temporary = path.with_name(path.name + '.em-cleanup')
+        try:
+            temporary.write_text(updated, encoding='utf-8')
+            temporary.replace(path)
+        finally:
+            temporary.unlink(missing_ok=True)
+        print('Obsolete Energy Manager configuration sections cleaned')
+
+rollback_snapshot = None
+update_committed = False
+
 try:
+    os.makedirs('/config/.energy_manager', exist_ok=True)
+    with open('/config/.energy_manager/update_result.txt', 'w') as f:
+        f.write('running')
     cleanup_old_backups()
     
     args = parse_arguments()
@@ -1133,27 +1604,13 @@ try:
     installed_version = version_tuple(result['current_version'])
 
     if not should_update:
-        print("Checking HACS dependencies...")
-        update_dashboard_status("Checking HACS dependencies...", "info")
-
-        hacs_changes = sync_hacs_components_via_ssh(
-            result['manifest'].get('hacs_components', [])
+        print("Your Energy Manager is currently up to date; no changes made")
+        update_dashboard_status(
+            "No updates available. System is up to date.",
+            "success"
         )
-
-        if hacs_changes:
-            print(f"✅ HACS dependencies reconciled: {len(hacs_changes)} changes")
-            update_dashboard_status(
-                f"HACS dependencies updated: {len(hacs_changes)} changes",
-                "success"
-            )
-        else:
-            print("No updates available")
-            update_dashboard_status(
-                "No updates available. System is up to date.",
-                "success"
-            )
         with open('/config/.energy_manager/update_result.txt', 'w') as f:
-            f.write("success:hacs" if hacs_changes else "no_updates")
+            f.write("no_updates")
         sys.exit(0)
     
     manifest = result.get('manifest')
@@ -1164,6 +1621,11 @@ try:
         with open('/config/.energy_manager/update_result.txt', 'w') as f:
             f.write("error:Failed to download manifest")
         sys.exit(1)
+
+    # Energy Manager 2.0.0 requires Home Assistant 2026.11+ and Marketplace.
+    require_marketplace()
+
+    rollback_snapshot = create_update_snapshot(manifest)
     
     if args.force_reinstall:
         print(f"Force reinstalling version {manifest['version']}...")
@@ -1172,21 +1634,55 @@ try:
     
     update_dashboard_status(f"Updating to version {manifest['version']}...", "info")
     success = True
+    update_failures = []
     selected_files = {}
     for filepath, file_info in manifest['files'].items():
-        if args.force_reinstall or version_tuple(file_info['new_in_version']) > installed_version:
-            selected_files[filepath] = file_info
+        selected_files[filepath] = file_info
     selected_manifest = dict(manifest, files=selected_files)
     for filepath, file_info in selected_files.items():
         local_path = filepath if filepath.startswith('/share/') else os.path.join('/config', filepath)
         print(f"Processing {filepath}...")
         update_dashboard_status(f"Updating file: {filepath}...", "info")
+        action = file_info.get('action', 'merge')
+        if action == 'remove':
+            if os.path.isfile(local_path) or os.path.islink(local_path):
+                os.unlink(local_path)
+                print(f"✓ Removed obsolete file: {filepath}")
+            elif os.path.isdir(local_path):
+                raise RuntimeError(f"Refusing to remove directory: {filepath}")
+            else:
+                print(f"✓ File already absent, skipping: {filepath}")
+            continue
         os.makedirs(os.path.dirname(local_path), exist_ok=True)
         temp_path = f"{local_path}.temp"
         if not update_checker.download_file(filepath, temp_path):
             success = False
+            update_failures.append(f"Failed to download: {filepath}")
             continue
         try:
+            is_binary = os.path.splitext(filepath)[1].lower() in (
+                '.png', '.jpg', '.jpeg', '.webp', '.gif', '.ico'
+            )
+            if is_binary:
+                if action == 'merge':
+                    raise ValueError(
+                        f'Cannot merge binary file: {filepath}'
+                    )
+                if os.path.isdir(local_path):
+                    raise RuntimeError(
+                        f'Binary destination is a directory: {filepath}'
+                    )
+                if action == 'create' and os.path.exists(local_path):
+                    print(f"✓ Binary file already exists: {filepath}")
+                    continue
+                if os.path.exists(local_path) and file_info.get('backup_current', False):
+                    file_merger.create_backup(
+                        local_path, manifest['version']
+                    )
+                os.replace(temp_path, local_path)
+                print(f"✓ Installed binary file: {filepath}")
+                continue
+
             with open(temp_path, 'r', encoding='utf-8') as f:
                 new_content = f.read()
             action = file_info.get('action', 'merge')
@@ -1200,30 +1696,60 @@ try:
                                 file_merger.replace_file(local_path, new_content, manifest['version']))
             else:
                 raise ValueError(f'Unknown action: {action}')
-            success &= bool(file_success)
+            if not file_success:
+                success = False
+                update_failures.append(f"Failed to install: {filepath}")
         finally:
             if os.path.exists(temp_path):
                 os.remove(temp_path)
 
+    if success and manifest.get('apps'):
+        print("Reconciling Supervisor Apps...")
+        update_dashboard_status("Reconciling Supervisor Apps...", "info")
+        try:
+            from em_apps_manager import reconcile
+            reconcile(
+                manifest,
+                repair=True,
+                protect_ssh_session=True
+            )
+        except Exception as e:
+            print(f"❌ App reconciliation failed: {e}")
+            success = False
+            update_failures.append(f"Supervisor Apps: {e}")
+
+    if not success:
+        raise RuntimeError(
+            "Update failed: " + "; ".join(update_failures)
+        )
+
+    cleanup_obsolete_em_sections(file_merger, manifest['version'])
+    cleanup_legacy_placeholder_files(file_merger, manifest['version'])
+   
     print("Processing special file operations...")
     update_dashboard_status("Processing special file operations...", "info")
     special_files_success = handle_special_files(selected_manifest)
     success &= special_files_success
+    if not special_files_success:
+        update_failures.append("Special file operations failed")
 
     print("Processing entity updates...")
     update_dashboard_status("Processing entity updates...", "info")
     entities_success = handle_entities_update(selected_manifest)
     success &= entities_success
+    if not entities_success:
+        update_failures.append("Entity configuration update failed")
 
     print("Processing Lovelace resource updates...")
     update_dashboard_status("Processing Lovelace resource updates...", "info")
     lovelace_success = update_lovelace_resources(dict(manifest, lovelace_resources=[
         resource for resource in manifest.get('lovelace_resources', [])
-        if args.force_reinstall or version_tuple(resource['new_in_version']) > installed_version]))
+        ]))
     success &= lovelace_success
+    if not lovelace_success:
+        update_failures.append("Lovelace resource update failed")
     
-    update_flows = ('nodered_flows' in manifest and
-                    (args.force_reinstall or version_tuple(manifest['nodered_flows']['new_in_version']) > installed_version))
+    update_flows = ('nodered_flows' in manifest and True)
     if update_flows:
         flows_info = manifest['nodered_flows']
         download_url = flows_info.get('download_url')
@@ -1244,16 +1770,16 @@ try:
                     
                     if ssh_result:
                         print("✓ Node-RED flows updated via SSH")
-                        if not REQUESTS_AVAILABLE:
-                            _restart_nodered_via_ssh()
                     else:
                         print("✗ SSH flows update failed")
                         success = False
+                        update_failures.append("Node-RED flows: SSH update failed")
                     
                 else:
                     print("✗ Downloaded Node-RED flows file is invalid JSON")
                     update_dashboard_status("Downloaded Node-RED flows file is invalid JSON", "error")
                     success = False
+                    update_failures.append("Node-RED flows: downloaded JSON invalid")
                 
                 if os.path.exists(flows_temp_path):
                     os.remove(flows_temp_path)
@@ -1261,61 +1787,106 @@ try:
                 print("✗ Failed to download Node-RED flows")
                 update_dashboard_status("Failed to download Node-RED flows", "error")
                 success = False
+                update_failures.append("Node-RED flows: download failed")
         else:
             print("✗ No download URL specified for Node-RED flows")
             update_dashboard_status("No download URL specified for Node-RED flows", "error")
             success = False
+            update_failures.append("Node-RED flows: download URL missing")
     
     if success and update_flows:
         print("Restarting Node-RED to pick up changes...")
         update_dashboard_status("Restarting Node-RED...", "info")
-        
+
+        token = (
+            os.environ.get('SUPERVISOR_TOKEN')
+            or os.environ.get('HASSIO_TOKEN')
+        )
+
         try:
-            if REQUESTS_AVAILABLE:
-                url = "http://supervisor/addons/a0d7b954_nodered/restart"
-                headers = {
-                    'Authorization': 'Bearer ' + os.environ.get('SUPERVISOR_TOKEN', ''),
+            if not token:
+                raise RuntimeError('Supervisor token unavailable')
+
+            request = urllib.request.Request(
+                'http://supervisor/addons/a0d7b954_nodered/restart',
+                data=b'{}',
+                method='POST',
+                headers={
+                    'Authorization': f'Bearer {token}',
                     'Content-Type': 'application/json'
                 }
-                
-                response = requests.post(url, headers=headers, timeout=30)
-                
-                if response.status_code == 200:
-                    print("✅ Node-RED restart initiated")
-                else:
-                    print(f"❌ Node-RED restart failed: {response.status_code}")
-                    print("Please restart Node-RED manually")
-                    
-            else:
-                print("⚠ Please restart Node-RED manually - requests not available")
-                
-        except Exception as e:
-            print(f"❌ Node-RED restart error: {e}")
-            print("Please restart Node-RED manually")
+            )
+
+            with urllib.request.urlopen(request, timeout=30) as response:
+                result = json.load(response)
+
+            if result.get('result') == 'error':
+                raise RuntimeError(
+                    result.get('message', 'Supervisor rejected restart')
+                )
+
+            print("✅ Node-RED restart initiated")
+
+        except (urllib.error.URLError, TimeoutError,
+                OSError, ValueError, RuntimeError) as exc:
+            print(f"⚠ Supervisor Node-RED restart failed: {exc}")
+            print("Attempting Node-RED restart via SSH...")
+            if not _restart_nodered_via_ssh():
+                print("❌ Node-RED restart failed")
+                success = False
+                update_failures.append(
+                    f"Node-RED restart failed: Supervisor error: {exc}; SSH fallback failed"
+                )
     
     if success:
-        print("Processing HACS dependencies...")
+        print("Processing Marketplace dependencies...")
         update_dashboard_status(
-            "Processing HACS dependencies...",
+            "Processing Marketplace dependencies...",
             "info"
         )
         try:
-            hacs_changes = sync_hacs_components_via_ssh(
-                manifest.get('hacs_components', [])
+            marketplace_changes = sync_marketplace_components_via_ssh(
+                manifest.get('marketplace_components', []),
+                repair=args.force_reinstall
             )
             print(
-                f"✅ HACS dependencies reconciled: "
-                f"{len(hacs_changes)} changes"
+                f"✅ Marketplace dependencies reconciled: "
+                f"{len(marketplace_changes)} changes"
+            )
+
+            # This file is deployed from the manifest earlier in the
+            # update. Only normal updates and Force Reinstall reach here.
+            integration_script = (
+                '/config/scripts/configure_em_integrations.py'
+            )
+
+            if not os.path.isfile(integration_script):
+                raise RuntimeError(
+                    'Required integration configuration script missing: '
+                    + integration_script
+                )
+
+            print(
+                "MQTT and Node-RED Companion reconciliation "
+                "scheduled after OS reboot"
             )
         except Exception as e:
-            print(f"❌ HACS dependency update failed: {e}")
+            print(f"❌ Dependency reconciliation failed: {e}")
             update_dashboard_status(
-                f"HACS dependency update failed: {e}",
+                f"Marketplace dependency update failed: {e}",
                 "error"
             )
             success = False
+            update_failures.append(f"Marketplace dependencies: {e}")
 
     if success:
+        update_dashboard_status(
+            "Validating Home Assistant configuration...", "info"
+        )
+
+        validate_home_assistant_config()
+        reboot_token = prepare_post_update_reboot()
+        
         update_checker.set_current_version(manifest['version'])
         with open('/config/.energy_manager/installed_branch.txt', 'w', encoding='utf-8') as f:
             f.write(update_checker.branch + '\n')
@@ -1324,17 +1895,51 @@ try:
         
         with open('/config/.energy_manager/update_result.txt', 'w') as f:
             f.write(f"success:{manifest['version']}")
+
+        update_committed = True
+        
+        print(
+            "Energy Manager update complete. "
+            "A full Home Assistant OS reboot is mandatory.",
+            flush=True
+        )
+        reboot_home_assistant_os(reboot_token)
         sys.exit(0)
     else:
-        print("❌ Update failed")
-        update_status_failed("One or more update steps failed")
-        with open('/config/.energy_manager/update_result.txt', 'w') as f:
-            f.write("failed")
-        sys.exit(1)
+        raise RuntimeError(
+            "Update failed: " + "; ".join(update_failures)
+            if update_failures
+            else "Update failed: unknown operation; check update-run.log"
+        )
 
 except Exception as e:
     print(f"Update process failed: {e}")
-    update_status_failed(str(e))
+
+    error_message = str(e)
+
+    if rollback_snapshot is not None and not update_committed:
+        print(
+            '[EM Rollback] Update failed; restoring previous managed files...',
+            flush=True
+        )
+        try:
+            restore_update_snapshot(rollback_snapshot)
+            print(
+                '[EM Rollback] Checking restored Home Assistant configuration...',
+                flush=True
+            )
+            validate_home_assistant_config()
+            error_message += (
+                ' | Previous managed files restored and configuration validated'
+            )
+        except Exception as rollback_error:
+            print(
+                f'[EM Rollback] ERROR: {rollback_error}',
+                flush=True
+            )
+            error_message += f' | Rollback verification failed: {rollback_error}'
+
+    update_status_failed(error_message)
     with open('/config/.energy_manager/update_result.txt', 'w') as f:
-        f.write(f"error:{str(e)}")
+        f.write(f"error:{error_message}")
     sys.exit(1)

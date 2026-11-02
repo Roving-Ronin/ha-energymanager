@@ -11,7 +11,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import PurePosixPath
-from hacs_manager import validate_components
+from marketplace_manager import validate_components
 
 REPOSITORY = os.environ.get('EM_UPDATE_REPOSITORY', 'ha-energymanager/ha-energymanager')
 VERSION_RE = re.compile(r'^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$')
@@ -141,14 +141,14 @@ class EnergyManagerUpdateChecker:
             raise ValueError('Manifest version does not match latest.txt')
         for path, info in data['files'].items():
             manifest_source_path(path)
-            if not isinstance(info, dict) or info.get('action', 'merge') not in ('merge', 'replace', 'create'):
+            if not isinstance(info, dict) or info.get('action', 'merge') not in ('merge', 'replace', 'create', 'remove'):
                 raise ValueError(f'Invalid manifest entry for {path!r}')
             version_tuple(info.get('new_in_version', ''))
         flows = data.get('nodered_flows')
         if flows:
             manifest_source_path(flows['download_url'])
             version_tuple(flows['new_in_version'])
-        validate_components(data.get('hacs_components', []))
+        validate_components(data.get('marketplace_components', []))
         return data
 
     def check_for_updates(self, force=False):

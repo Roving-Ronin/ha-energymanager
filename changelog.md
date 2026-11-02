@@ -1,11 +1,25 @@
 # Changelog
 
 <details open>
-<summary><strong>1.3.0 - 2026-10-xx</strong></summary>
+<summary><strong>2.0.0 - 2026-11-xx</strong></summary>
 
 ### Added
+* New update method 
+  * Now via Github allowing community submissions
+  * Integration, Marketplace and App installation control and configuration
+  * Version control on integrations, HACS and App components
+  * Forced reboot after any update
+  * Built in YAML syntax check
+  * Bootstap deployment method - the ability to deploy EM to vanilla OS without requiring a restoration
+  * Removal of backup restoration method for new deployments
+  * Automatic BOM configuration
+  * Minimum requirement: Home Assistant Core 2026.11+
+* Updated Energy Flow visual
+  * Includes weather animations
+  * Include EV charging animations
+* Updated PV Dashboard with configurable sections
+* Updated Pricing strategy configuration pages
 * New split news page. One column version specific, one for general information, and one for changelog
-* New update method via Github allowing community submissions
 * Safe-guard added for Flow Power users if EM tag detection file not present
 * All entities now YAML based (removal of UI entities via migration script)
 * Update script now manages HACS component addition/removal/forced version.
@@ -13,11 +27,14 @@
 * EV update - changed decisions to be made once per minute when EV is being charged. This gives a more granular reading for the solar_only and solar_preferred policies.
 * Sigenergy - EMS mode now on for self-consumption to fix issue found in firmware 116 & 117
 * Energy Plan - now supports EV charging forecast and past events (events card v3.5.1)
+* Goodwe_int charge_discharge power script split out from goodwe & goodwe_et
+* Goodwe_int startup behaviour now included, self-consumption on HA restart
 #### Fixed
 * Energy_manager_overview.yaml 24hr chart not showing, fixed
 * House load not calculated correctly in "Other\DIY" provider Node-RED
 * Bug where if export price (for Other\DIY) is for a 24hr period that it would fail to detect the period
 * Removal of "# Goodwe not supported" in em_scripts.yaml (current_reserved_soc_backup), was producing entry in system log
+* Sigenergy - fixed accumulated energy (charge/discharge) sensors in em_scripts.yaml
 
 </details>
 

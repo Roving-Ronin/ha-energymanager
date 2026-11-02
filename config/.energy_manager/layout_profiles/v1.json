@@ -1,0 +1,528 @@
+{
+  "format": "energy-manager-layout-profile",
+  "version": 1,
+  "name": "v1",
+  "cards": {
+    "buy-price": {
+      "col": 0,
+      "order": 0,
+      "width": 6,
+      "hidden": false,
+      "hidden_devices": [
+        "desktop"
+      ],
+      "locked": false,
+      "lock_device": null
+    },
+    "sell-price": {
+      "col": 0,
+      "order": 1,
+      "width": 6,
+      "hidden": false,
+      "hidden_devices": [
+        "desktop"
+      ],
+      "locked": false,
+      "lock_device": null
+    },
+    "decision": {
+      "col": 0,
+      "order": 6,
+      "width": 12,
+      "hidden": false,
+      "hidden_devices": [],
+      "locked": false,
+      "lock_device": null
+    },
+    "ev_decision": {
+      "col": 0,
+      "order": 3,
+      "width": 12,
+      "hidden": false,
+      "hidden_devices": [],
+      "locked": false,
+      "lock_device": null
+    },
+    "energy-control": {
+      "col": 0,
+      "order": 7,
+      "width": 4,
+      "hidden": false,
+      "hidden_devices": [],
+      "locked": false,
+      "lock_device": null
+    },
+    "high-sell-price-mode": {
+      "col": 0,
+      "order": 9,
+      "width": 4,
+      "hidden": false,
+      "hidden_devices": [
+        "desktop"
+      ],
+      "locked": false,
+      "lock_device": null
+    },
+    "sell-buy-mode": {
+      "col": 0,
+      "order": 8,
+      "width": 4,
+      "hidden": false,
+      "hidden_devices": [
+        "desktop"
+      ],
+      "locked": false,
+      "lock_device": null
+    },
+    "input-boolean-energy-control-auto-reenable": {
+      "col": 0,
+      "order": 10,
+      "width": 8,
+      "hidden": false,
+      "hidden_devices": [],
+      "locked": false,
+      "lock_device": null
+    },
+    "energy-control-timer": {
+      "col": 0,
+      "order": 12,
+      "width": 12,
+      "hidden": false,
+      "hidden_devices": [],
+      "locked": false,
+      "lock_device": null
+    },
+    "warning-2": {
+      "col": 0,
+      "order": 11,
+      "width": 12,
+      "hidden": false,
+      "hidden_devices": [],
+      "locked": false,
+      "lock_device": null
+    },
+    "future-decisions": {
+      "col": 0,
+      "order": 11,
+      "width": 12,
+      "hidden": false,
+      "hidden_devices": [
+        "desktop"
+      ],
+      "locked": false,
+      "lock_device": null
+    },
+    "net": {
+      "col": 1,
+      "order": 0,
+      "width": 4,
+      "hidden": false,
+      "hidden_devices": [
+        "desktop"
+      ],
+      "locked": false,
+      "lock_device": null
+    },
+    "buy": {
+      "col": 1,
+      "order": 1,
+      "width": 4,
+      "hidden": false,
+      "hidden_devices": [
+        "desktop"
+      ],
+      "locked": false,
+      "lock_device": null
+    },
+    "sell": {
+      "col": 1,
+      "order": 2,
+      "width": 4,
+      "hidden": false,
+      "hidden_devices": [
+        "desktop"
+      ],
+      "locked": false,
+      "lock_device": null
+    },
+    "generation": {
+      "col": 1,
+      "order": 3,
+      "width": 6,
+      "hidden": false,
+      "hidden_devices": [
+        "desktop"
+      ],
+      "locked": false,
+      "lock_device": null
+    },
+    "total-consumed": {
+      "col": 1,
+      "order": 4,
+      "width": 6,
+      "hidden": false,
+      "hidden_devices": [
+        "desktop"
+      ],
+      "locked": false,
+      "lock_device": null
+    },
+    "ems-control": {
+      "col": 1,
+      "order": 17,
+      "width": 12,
+      "hidden": false,
+      "hidden_devices": [],
+      "locked": false,
+      "lock_device": null
+    },
+    "grid-import": {
+      "col": 0,
+      "order": 3,
+      "width": 6,
+      "hidden": false,
+      "hidden_devices": [
+        "desktop"
+      ],
+      "locked": false,
+      "lock_device": null
+    },
+    "grid-export": {
+      "col": 0,
+      "order": 2,
+      "width": 6,
+      "hidden": false,
+      "hidden_devices": [
+        "desktop"
+      ],
+      "locked": false,
+      "lock_device": null
+    },
+    "battery-charge": {
+      "col": 1,
+      "order": 5,
+      "width": 6,
+      "hidden": false,
+      "hidden_devices": [
+        "desktop"
+      ],
+      "locked": false,
+      "lock_device": null
+    },
+    "battery-discharge": {
+      "col": 1,
+      "order": 6,
+      "width": 6,
+      "hidden": false,
+      "hidden_devices": [
+        "desktop"
+      ],
+      "locked": false,
+      "lock_device": null
+    },
+    "total-charge": {
+      "col": 1,
+      "order": 7,
+      "width": 6,
+      "hidden": false,
+      "hidden_devices": [
+        "desktop"
+      ],
+      "locked": false,
+      "lock_device": null
+    },
+    "total-discharge": {
+      "col": 1,
+      "order": 8,
+      "width": 6,
+      "hidden": false,
+      "hidden_devices": [
+        "desktop"
+      ],
+      "locked": false,
+      "lock_device": null
+    },
+    "daytime-consumption": {
+      "col": 1,
+      "order": 9,
+      "width": 6,
+      "hidden": false,
+      "hidden_devices": [
+        "desktop"
+      ],
+      "locked": false,
+      "lock_device": null
+    },
+    "night-consumption": {
+      "col": 1,
+      "order": 10,
+      "width": 6,
+      "hidden": false,
+      "hidden_devices": [
+        "desktop"
+      ],
+      "locked": false,
+      "lock_device": null
+    },
+    "consumed-from-pv": {
+      "col": 1,
+      "order": 11,
+      "width": 6,
+      "hidden": false,
+      "hidden_devices": [
+        "desktop"
+      ],
+      "locked": false,
+      "lock_device": null
+    },
+    "consumed-from-battery": {
+      "col": 1,
+      "order": 12,
+      "width": 6,
+      "hidden": false,
+      "hidden_devices": [
+        "desktop"
+      ],
+      "locked": false,
+      "lock_device": null
+    },
+    "consumed-from-grid": {
+      "col": 1,
+      "order": 13,
+      "width": 6,
+      "hidden": false,
+      "hidden_devices": [
+        "desktop"
+      ],
+      "locked": false,
+      "lock_device": null
+    },
+    "inverter-last-12-hours": {
+      "col": 1,
+      "order": 14,
+      "width": 12,
+      "hidden": false,
+      "hidden_devices": [
+        "desktop"
+      ],
+      "locked": false,
+      "lock_device": null
+    },
+    "current-power-profile": {
+      "col": 1,
+      "order": 21,
+      "width": 12,
+      "hidden": false,
+      "hidden_devices": [],
+      "locked": false,
+      "lock_device": null
+    },
+    "energy-flow-visual": {
+      "col": 2,
+      "order": 0,
+      "width": 12,
+      "hidden": false,
+      "hidden_devices": [],
+      "locked": false,
+      "lock_device": null
+    },
+    "demand-period-active-notification": {
+      "col": 2,
+      "order": 13,
+      "width": 12,
+      "hidden": false,
+      "hidden_devices": [],
+      "locked": false,
+      "lock_device": null
+    },
+    "pea-watch": {
+      "col": 2,
+      "order": 1,
+      "width": 12,
+      "hidden": false,
+      "hidden_devices": [],
+      "locked": false,
+      "lock_device": null
+    },
+    "solar-forecast-today": {
+      "col": 2,
+      "order": 2,
+      "width": 4,
+      "hidden": false,
+      "hidden_devices": [
+        "desktop"
+      ],
+      "locked": false,
+      "lock_device": null
+    },
+    "forecast-tomorrow": {
+      "col": 2,
+      "order": 3,
+      "width": 4,
+      "hidden": false,
+      "hidden_devices": [
+        "desktop"
+      ],
+      "locked": false,
+      "lock_device": null
+    },
+    "forecast-day-after-tomorrow": {
+      "col": 2,
+      "order": 1,
+      "width": 4,
+      "hidden": false,
+      "hidden_devices": [
+        "desktop"
+      ],
+      "locked": false,
+      "lock_device": null
+    },
+    "24-hour-energy-plan": {
+      "col": 2,
+      "order": 4,
+      "width": 12,
+      "hidden": false,
+      "hidden_devices": [
+        "desktop"
+      ],
+      "locked": false,
+      "lock_device": null
+    },
+    "price-and-curtailment-forecast": {
+      "col": 2,
+      "order": 5,
+      "width": 12,
+      "hidden": false,
+      "hidden_devices": [
+        "desktop"
+      ],
+      "locked": false,
+      "lock_device": null
+    },
+    "ev-charging-forecast": {
+      "col": 2,
+      "order": 6,
+      "width": 12,
+      "hidden": false,
+      "hidden_devices": [
+        "desktop"
+      ],
+      "locked": false,
+      "lock_device": null
+    },
+    "system-status": {
+      "col": 0,
+      "order": 5,
+      "width": 12,
+      "hidden": false,
+      "hidden_devices": [
+        "tablet",
+        "mobile"
+      ],
+      "locked": false,
+      "lock_device": null
+    },
+    "system-information": {
+      "col": 0,
+      "order": 4,
+      "width": 12,
+      "hidden": false,
+      "hidden_devices": [
+        "tablet",
+        "mobile"
+      ],
+      "locked": false,
+      "lock_device": null
+    },
+    "battery-soc-settings": {
+      "col": 1,
+      "order": 18,
+      "width": 12,
+      "hidden": false,
+      "hidden_devices": [
+        "tablet",
+        "mobile"
+      ],
+      "locked": false,
+      "lock_device": null
+    },
+    "power-settings": {
+      "col": 1,
+      "order": 19,
+      "width": 12,
+      "hidden": false,
+      "hidden_devices": [
+        "tablet",
+        "mobile"
+      ],
+      "locked": false,
+      "lock_device": null
+    },
+    "scheduled-charge": {
+      "col": 1,
+      "order": 20,
+      "width": 12,
+      "hidden": false,
+      "hidden_devices": [
+        "tablet",
+        "mobile"
+      ],
+      "locked": false,
+      "lock_device": null
+    },
+    "power-status": {
+      "col": 2,
+      "order": 7,
+      "width": 12,
+      "hidden": false,
+      "hidden_devices": [
+        "tablet",
+        "mobile"
+      ],
+      "locked": false,
+      "lock_device": null
+    },
+    "energy-today": {
+      "col": 2,
+      "order": 8,
+      "width": 12,
+      "hidden": false,
+      "hidden_devices": [
+        "tablet",
+        "mobile"
+      ],
+      "locked": false,
+      "lock_device": null
+    },
+    "inverter-settings": {
+      "col": 2,
+      "order": 9,
+      "width": 12,
+      "hidden": false,
+      "hidden_devices": [
+        "tablet",
+        "mobile"
+      ],
+      "locked": false,
+      "lock_device": null
+    },
+    "weather-today": {
+      "col": 1,
+      "order": 15,
+      "width": 12,
+      "hidden": true,
+      "hidden_devices": [],
+      "locked": false,
+      "lock_device": null
+    },
+    "weather-four-day-forecast": {
+      "col": 1,
+      "order": 16,
+      "width": 12,
+      "hidden": true,
+      "hidden_devices": [],
+      "locked": false,
+      "lock_device": null
+    }
+  }
+}

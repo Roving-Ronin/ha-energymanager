@@ -12,6 +12,52 @@ import subprocess
 import shlex
 from pathlib import Path
 
+def component_backend():
+    import urllib.request
+
+    token = (
+        os.environ.get('SUPERVISOR_TOKEN')
+        or os.environ.get('HASSIO_TOKEN')
+    )
+    if not token:
+        raise RuntimeError('Supervisor token unavailable')
+
+    request = urllib.request.Request(
+        'http://supervisor/core/info',
+        headers={'Authorization': 'Bearer ' + token}
+    )
+    with urllib.request.urlopen(request, timeout=20) as response:
+        payload = json.load(response)
+
+    version = str(payload.get('data', {}).get('version', ''))
+    match = re.match(r'^(\d{4})\.(\d+)(?:\.|$)', version)
+
+    if not match:
+        raise RuntimeError(
+            f'Cannot determine Home Assistant Core version: {version!r}'
+        )
+
+    backend = (
+        'marketplace'
+        if (int(match.group(1)), int(match.group(2))) >= (2026, 11)
+        else 'hacs'
+    )
+    print(f'[EM Components] HA Core {version}: {backend}')
+    return backend
+
+
+def require_component_backend():
+    backend = component_backend()
+
+    if backend == 'marketplace':
+        raise NotImplementedError(
+            'Home Assistant Marketplace component deployment is '
+            'reserved for Energy Manager v2.0.0. '
+            'The Marketplace installer has not yet been implemented. '
+            'No HACS fallback will be attempted.'
+        )
+
+    return backend
 
 def remove_local_hacs_component(relative_path):
     if not isinstance(relative_path, str):
@@ -223,6 +269,23 @@ def sync_hacs_components(entries, dry_run=False):
             if repo.get('category') != entry['type']:
                 raise RuntimeError('HACS category mismatch: ' + name)
             installed = bool(repo.get('installed'))
+            # HACS metadata can report an integration as installed even
+            # when its files have been removed from the filesystem.
+            integration_directories = {
+                'zachowj/hass-node-red': 'nodered',
+                'bremor/bureau_of_meteorology': 'bureau_of_meteorology',
+                'bjreplay/ha-solcast-solar': 'solcast_solar',
+            }
+            integration_domain = integration_directories.get(name.lower())
+            files_missing = (
+                entry['action'] == 'install'
+                and integration_domain is not None
+                and not (
+                    Path('/config/custom_components')
+                    / integration_domain
+                    / 'manifest.json'
+                ).is_file()
+            )
             version = entry.get('version', 'latest')
             target = repo.get('available_version') if version == 'latest' else version
             if entry['action'] == 'remove':
@@ -230,7 +293,7 @@ def sync_hacs_components(entries, dry_run=False):
             else:
                 if not target and version != 'latest':
                     raise RuntimeError('Cannot determine desired version: ' + name)
-                needed = not installed or (
+                needed = files_missing or not installed or (
                     bool(target) and repo.get('installed_version') != target
                 )
             if not needed:
@@ -257,6 +320,14 @@ def sync_hacs_components(entries, dry_run=False):
             if entry['action'] == 'remove' and verified.get('installed'):
                 raise RuntimeError('Failed to verify removal: ' + name)
             if entry['action'] == 'install':
+                if integration_domain and not (
+                    Path('/config/custom_components')
+                    / integration_domain
+                    / 'manifest.json'
+                ).is_file():
+                    raise RuntimeError(
+                        'HACS integration files still missing: ' + name
+                    )
                 if not verified.get('installed'):
                     raise RuntimeError('Failed to verify installation: ' + name)
                 if version != 'latest' and verified.get('installed_version') != target:

@@ -66,5 +66,8 @@ recorder:
       - automation_triggered
       - call_service
       - script_started
+
+em_dashboard_layout:
+
 # === ENERGY_MANAGER_UI_END ===
 
