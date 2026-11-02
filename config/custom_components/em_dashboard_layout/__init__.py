@@ -71,8 +71,17 @@ def _load_bundled_profiles(path: Path, data: dict) -> tuple[dict, bool]:
                 added_v2 = True
         seen.append(key)
         changed = True
-    if added_v2:
-        data["active_profile"] = "bundled-v2"
+    if "bundled-v2" in profiles:
+        everyday = profiles.get("everyday")
+        if (isinstance(everyday, dict)
+                and everyday.get("name") == "Everyday"
+                and everyday.get("cards") == {}):
+            del profiles["everyday"]
+            changed = True
+            if data.get("active_profile") == "everyday":
+                data["active_profile"] = "bundled-v2"
+        if added_v2:
+            data["active_profile"] = "bundled-v2"
     if changed:
         data["revision"] += 1
         _ensure_size(data)
