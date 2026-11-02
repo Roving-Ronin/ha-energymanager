@@ -23,7 +23,7 @@ import time
 import stat
 
 REPO = os.environ.get('EM_UPDATE_REPOSITORY', 'ha-energymanager/ha-energymanager')
-BRANCH = os.environ.get('EM_UPDATE_BRANCH', 'development')
+BRANCH = os.environ.get('EM_UPDATE_BRANCH', 'main')
 ROOT = Path('/config')
 STATE = ROOT / '.energy_manager'
 SCRIPTS = ROOT / 'scripts'
