@@ -1011,7 +1011,7 @@ input_number:
   battery_morning_prep:
     name: battery_morning_prep
     min: 0
-    max: 100
+    max: 300
     step: 1
     mode: box
     icon: mdi:currency-usd
