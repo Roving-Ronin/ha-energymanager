@@ -22,7 +22,7 @@ import urllib.request
 import time
 import stat
 
-REPO = os.environ.get('EM_UPDATE_REPOSITORY', 'saltpool/ha-energymanager')
+REPO = os.environ.get('EM_UPDATE_REPOSITORY', 'ha-energymanager/ha-energymanager')
 BRANCH = os.environ.get('EM_UPDATE_BRANCH', 'development')
 ROOT = Path('/config')
 STATE = ROOT / '.energy_manager'
