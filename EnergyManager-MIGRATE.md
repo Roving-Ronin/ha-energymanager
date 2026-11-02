@@ -1,5 +1,5 @@
 
-# Upgrading Energy Manager to v2.0.0
+# Migrating Energy Manager to GitHub updater for v2.0.0
 
 Energy Manager v2.0.0 introduces a new GitHub-based installation and update system, replacing the previous update server method.
 
