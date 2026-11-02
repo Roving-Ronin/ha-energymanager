@@ -13,7 +13,7 @@ import urllib.request
 from datetime import datetime
 from pathlib import Path
 
-REPOSITORY = 'saltpool/ha-energymanager'
+REPOSITORY = 'ha-energymanager/ha-energymanager'
 BRANCH = 'development'
 FILES = (
     'scripts/update_checker.py',
