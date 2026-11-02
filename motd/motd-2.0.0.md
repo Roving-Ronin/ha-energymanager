@@ -27,7 +27,7 @@ You are most welcome to contribute to this project by creating a pull request ag
 
 ## The PV Dashboard has changed
 
-The PV Dashboard has been optimised and has brought aspects from a number of existing dashboards (plus some new stuff) to one dashboard. Information that seldom changes has been moved to another dashboard tab. It is possible, through the PV Dashboard settings, to disable or enable features of the PV Dashboard as not everyone will want all features enabled all the time.
+The PV Dashboard has been optimised and has brought aspects from a number of existing dashboards (plus some new stuff) to one dashboard. Information that seldom changes has been moved to another dashboard tab. It is possible, through the PV Dashboard settings, to move around cards and features of the PV Dashboard, hide them, and create your own dashboard profiles.  The dashboards that you make can be exported and shared with others.  Make sure to check out the various customisation options that now can be used with v2.0 of EM.
 
 ## The Price Strategy Configurator has changed
 
@@ -46,12 +46,12 @@ This MOTD page now contains three columns, instead of the original single column
 3. Detailed changelog for all versions
 
 ### EV Charging
-If EV charging is in progress, Energy Manager will now check with the backend servers once per minute, instead of the default once per 5 minutes. This will give a finer control of EV charging amperage, meaning that it should offer more time-critical decisions like altering the charging rate for solar_only and solar_preferred policies.
+If EV charging is in progress, Energy Manager will now check with the backend servers once per minute, instead of the default once per 5 minutes. This will give a finer control of EV charging amperage, meaning that it should offer more time-critical decisions like altering the charging rate for solar_only and solar_preferred policies.  You can also enable the EV Charging forecast and also the latest EV Charging decision cards to be placed on the main PV Dashboard for ease of information access.
 
 The **events card** has been updated to include EV charging forecasts and history.
 
 ### HACS component add & removes
-HACS component installs and removals, along with specified version requirements, are now included in the update script. This means that if an old component is retired by the HACS team that we can simply include the removal and/or replacement in the next update, meaning that you do not need to manually perform the work yourself.  If there are new HACS components that would improve Energy Manager, we can simply add them in to be automatically installed on the next update.
+Marketplace (formally HACS) component installs and removals, along with specified version requirements, are now included in the update script. This means that if an old component is retired by the Marketplace team that we can simply include the removal and/or replacement in the next update, meaning that you do not need to manually perform the work yourself.  If there are new Marketplace components that would improve Energy Manager, we can simply add them in to be automatically installed on the next update.
 
 ### Various other bug fixes
-Refer to the Changelog, on the right, for other bug fixes/updates included in v1.3.0
+Refer to the Changelog, on the right, for other bug fixes/updates included in v2.0.0
