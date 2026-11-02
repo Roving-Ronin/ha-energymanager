@@ -14,7 +14,7 @@ from datetime import datetime
 from pathlib import Path
 
 REPOSITORY = 'ha-energymanager/ha-energymanager'
-BRANCH = 'development'
+BRANCH = 'main'
 FILES = (
     'scripts/update_checker.py',
     'scripts/check_energy_manager_updates.py',
