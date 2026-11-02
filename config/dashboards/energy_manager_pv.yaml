@@ -309,7 +309,7 @@ views:
         name: Auto re-enable Energy Control
       view_layout:
         em_id: input-boolean-energy-control-auto-reenable
-        em_width: 12
+        em_width: 8
         em_name: Auto-reenable EM toggle
         em_column: 0
         em_order: 7
