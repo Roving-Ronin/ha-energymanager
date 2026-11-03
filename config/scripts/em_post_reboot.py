@@ -39,7 +39,7 @@ def write_status(status, detail=''):
     os.replace(tmp, STATUS)
 
 
-def notify_update_complete(token):
+def notify_update_complete(token, reinstall=False):
     """Notify Home Assistant after successful post-update checks."""
     import re
 
@@ -57,31 +57,43 @@ def notify_update_complete(token):
     if not re.fullmatch(r'\d+\.\d+\.\d+', version):
         raise RuntimeError('Invalid completed update version: ' + repr(version))
 
-    dismiss_request = urllib.request.Request(
-        'http://supervisor/core/api/services/persistent_notification/dismiss',
-        data=json.dumps({
-            'notification_id': 'em_updating'
-        }).encode('utf-8'),
-        method='POST',
-        headers={
-            'Authorization': 'Bearer ' + token,
-            'Content-Type': 'application/json'
-        }
-    )
+    for notification_id in ('em_updating', 'em_update_result'):
+        for attempt in range(1, 4):
+            dismiss_request = urllib.request.Request(
+                'http://supervisor/core/api/services/persistent_notification/dismiss',
+                data=json.dumps({
+                    'notification_id': notification_id
+                }).encode('utf-8'),
+                method='POST',
+                headers={
+                    'Authorization': 'Bearer ' + token,
+                    'Content-Type': 'application/json'
+                }
+            )
+            try:
+                with urllib.request.urlopen(dismiss_request, timeout=20):
+                    pass
+                print(
+                    f'[EM Post-Reboot] Dismissed notification: {notification_id}',
+                    flush=True
+                )
+                break
+            except (urllib.error.URLError, TimeoutError, OSError) as exc:
+                print(
+                    f'[EM Post-Reboot] Notification dismissal attempt '
+                    f'{attempt} failed for {notification_id}: {exc}',
+                    flush=True
+                )
+                if attempt < 3:
+                    time.sleep(3)
 
-    try:
-        with urllib.request.urlopen(dismiss_request, timeout=20):
-            pass
-    except (urllib.error.URLError, TimeoutError, OSError) as exc:
-        print(
-            f'[EM Post-Reboot] Could not dismiss progress notification: {exc}',
-            flush=True
-        )
+    operation = 'Reinstall' if reinstall else 'Update'
+    verb = 'reinstalled' if reinstall else 'updated'
 
     payload = {
-        'title': '✅ Energy Manager Update Complete',
+        'title': f'✅ Energy Manager {operation} Complete',
         'message': (
-            f'Energy Manager has successfully updated to version {version}. '
+            f'Energy Manager has successfully {verb} version {version}. '
             'Home Assistant has restarted and the post-update '
             'integration checks have completed successfully.'
         ),
@@ -133,7 +145,8 @@ def main():
             return
         if current.get('status') not in ('pending', 'running'):
             return
-        update_mode = current.get('kind') == 'update'
+        update_mode = current.get('kind') in ('update', 'reinstall')
+        reinstall_mode = current.get('kind') == 'reinstall'
         if not SCRIPT.is_file():
             write_status('failed', 'Missing /config/scripts/configure_em_integrations.py')
             return
@@ -168,7 +181,7 @@ def main():
                         'sending completion notification',
                         flush=True
                     )
-                    notify_update_complete(token)
+                    notify_update_complete(token, reinstall=reinstall_mode)
                     write_status(
                         'complete',
                         'Post-update integration reconciliation complete; '
