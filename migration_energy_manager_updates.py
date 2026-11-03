@@ -262,7 +262,7 @@ def migrate():
         result = subprocess.run(
             [
                 sys.executable, str(marketplace_script),
-                '--preflight', '--consent', '--github-auth',
+                '--preflight', '--consent', '--github-auth', '--force-github-reauth',
             ],
             check=False,
         )
