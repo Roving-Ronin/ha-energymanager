@@ -230,7 +230,7 @@ def validate_home_assistant_config():
     return True
 
 
-def prepare_post_update_reboot():
+def prepare_post_update_reboot(force_reinstall=False):
     """Register post-reboot checks and arm the one-time update task."""
     from pathlib import Path
     import urllib.request
@@ -309,7 +309,7 @@ def prepare_post_update_reboot():
     temporary.write_text(
         json.dumps({
             'status': 'pending',
-            'kind': 'update',
+            'kind': 'reinstall' if force_reinstall else 'update',
             'detail': 'Waiting for Home Assistant OS reboot'
         }) + '\n',
         encoding='utf-8'
@@ -1885,7 +1885,9 @@ try:
         )
 
         validate_home_assistant_config()
-        reboot_token = prepare_post_update_reboot()
+        reboot_token = prepare_post_update_reboot(
+            force_reinstall=args.force_reinstall
+        )
         
         update_checker.set_current_version(manifest['version'])
         with open('/config/.energy_manager/installed_branch.txt', 'w', encoding='utf-8') as f:
