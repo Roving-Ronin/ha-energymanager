@@ -47,7 +47,7 @@ views:
         - type: markdown
           content: |
             ## 📢Version Announcement available
-            [Open information page](/energy-pv/6)
+            [Open information page](/energy-pv/em-information)
           card_mod:
             style: |
               ha-card {
@@ -85,7 +85,7 @@ views:
         - type: markdown
           content: |
             ## 📢 General Announcement available
-            [Open information page](/energy-pv/5)
+            [Open information page](/energy-pv/em-information)
           card_mod:
             style: |
               ha-card {
@@ -4863,7 +4863,7 @@ views:
   - type: sections
     max_columns: 2
     icon: mdi:update
-    path: ""
+    path: em-updates
     sections:
       - type: grid
         cards:
@@ -4997,7 +4997,7 @@ views:
   - type: sections
     max_columns: 3
     icon: mdi:information-outline
-    path: ""
+    path: em-information
     sections:
       - type: grid
         cards:
