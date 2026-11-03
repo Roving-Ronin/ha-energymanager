@@ -246,11 +246,11 @@ def marketplace_api(method, path, data=None):
         return json.load(response)
 
 
-def ensure_marketplace_github(ws, interactive=False):
+def ensure_marketplace_github(ws, interactive=False, force_reauth=False):
     """Connect Marketplace to GitHub through its existing OAuth device flow."""
     info = ws.call('marketplace/info')
-    if info.get('github_connected') is True:
-        print('[EM Marketplace] GitHub authentication verified', flush=True)
+    if info.get('github_connected') is True and not force_reauth:
+        print('[EM Marketplace] GitHub connection present', flush=True)
         return
 
     if not interactive:
@@ -258,6 +258,12 @@ def ensure_marketplace_github(ws, interactive=False):
             'Marketplace is not connected to GitHub. '
             'Run the Energy Manager installer to complete one-time '
             'GitHub authorisation before installing Marketplace components.'
+        )
+
+    if force_reauth:
+        print(
+            '[EM Marketplace] Migration requires fresh GitHub authorisation.',
+            flush=True,
         )
 
     print(
@@ -369,8 +375,17 @@ def ensure_marketplace_github(ws, interactive=False):
         try:
             info = ws.call('marketplace/info')
             if info.get('github_connected') is True:
+                detected = ws.call(
+                    'marketplace/repositories/detect',
+                    repository='rudizl/platinum-weather-card-plus-charts',
+                )
+                if 'plugin' not in detected.get('categories', []):
+                    raise RuntimeError(
+                        'GitHub authorisation verification did not '
+                        'detect the expected Marketplace plugin'
+                    )
                 print(
-                    '[EM Marketplace] GitHub authentication successful',
+                    '[EM Marketplace] GitHub authentication verified through Marketplace repository detection','
                     flush=True,
                 )
                 return
@@ -417,9 +432,7 @@ def sync_marketplace_components(entries, dry_run=False, repair=False):
             if action == 'remove':
                 needed = installed
             else:
-                # Normal updates correct version drift. Force reinstall additionally
-                # repairs components whose installed version already matches.
-                needed = (not installed or files_missing or
+                needed = (repair or not installed or files_missing or
                           bool(target and repo.get('installed_version') != target))
             if not needed:
                 continue
@@ -500,13 +513,20 @@ def main():
                         help='Interactively request consent if Marketplace needs acknowledgement')
     parser.add_argument('--github-auth', action='store_true',
                         help='Interactively connect Marketplace to GitHub')
+    parser.add_argument('--force-github-reauth', action='store_true',
+                        help='Require fresh GitHub authorisation during migration')
     parser.add_argument('--manifest')
     parser.add_argument('--dry-run', action='store_true')
     args = parser.parse_args()
+    if args.force_github_reauth and not args.github_auth:
+        parser.error('--force-github-reauth requires --github-auth')
     require_marketplace()
     with HAWebSocket() as ws:
         info = check_marketplace(ws, ask_consent=args.consent)
-        ensure_marketplace_github(ws, interactive=args.github_auth)
+        ensure_marketplace_github(
+            ws, interactive=args.github_auth,
+            force_reauth=args.force_github_reauth,
+        )
         print('[EM Marketplace] Ready; GitHub connected: %s' % ws.call('marketplace/info').get('github_connected'), flush=True,)
     if args.manifest and not args.preflight:
         with open(args.manifest, encoding='utf-8') as handle:
