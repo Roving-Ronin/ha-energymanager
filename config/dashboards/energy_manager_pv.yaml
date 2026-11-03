@@ -4973,6 +4973,30 @@ views:
               service: script.turn_on
               service_data:
                 entity_id: script.update_energy_manager_force
+          - type: entities
+            title: Energy Manager Update Result
+            entities:
+              - entity: sensor.energy_manager_update_result
+                name: Last Update Result
+              - type: attribute
+                entity: sensor.energy_manager_update_result
+                attribute: detail
+                name: Update Details
+          - type: markdown
+            content: >-
+              **Important:** All Energy Manager updates and force reinstalls
+              require a mandatory Home Assistant OS reboot. The reboot
+              happens automatically, without further confirmation.
+
+              After starting an update, allow several minutes for installation,
+              the reboot and post-update checks. Do not restart Home Assistant,
+              interrupt the process or start another update.
+
+              Energy Manager will display a completion notification only
+              after Home Assistant has rebooted and the post-update checks
+              have completed successfully.
+
+              **Check Updates does not cause a reboot.**               
           - type: conditional
             conditions:
               - entity: input_boolean.energy_manager_update_available
