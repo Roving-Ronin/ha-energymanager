@@ -416,7 +416,13 @@
       "description": "PV Dashboard Layout",
       "backup_current": true,
       "new_in_version": "2.0.0"
-    },  
+    },
+    "www/community/modern-circular-gauge/modern-circular-gauge.js": {
+    "action": "replace",
+    "description": "Modern Circular Gauge Dashboard Card",
+    "backup_current": true,
+    "new_in_version": "2.0.0"
+    },
     "scripts/update_checker.py": {
       "action": "replace",
       "description": "Update checker",
@@ -782,12 +788,6 @@
     },
     {
       "repository": "kinghat/tabbed-card",
-      "type": "plugin",
-      "action": "install",
-      "version": "latest"
-    },
-    {
-      "repository": "selvalt7/modern-circular-gauge",
       "type": "plugin",
       "action": "install",
       "version": "latest"
