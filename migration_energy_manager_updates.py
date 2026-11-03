@@ -22,6 +22,7 @@ FILES = (
     'scripts/marketplace_manager.py',
     'scripts/em_apps_manager.py',
     'scripts/em_updater_bootstrap.py',
+    'scripts/em_update_launcher.py',
     'integrations/em_helpers.yaml',
 )
 CONFIG = Path('/config')
