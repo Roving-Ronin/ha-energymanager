@@ -1680,6 +1680,9 @@ automation:
         entity_id: sensor.energy_manager_update_result
         to: "error"
     action:
+      - action: persistent_notification.dismiss
+        data:
+          notification_id: em_updating
       - service: persistent_notification.create
         data:
           title: "❌ Energy Manager Update Failed"
