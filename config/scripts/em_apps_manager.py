@@ -60,7 +60,18 @@ def ensure_repository(prefix):
 def wait_for(slug, predicate, seconds=360):
     deadline = time.monotonic() + seconds
     while time.monotonic() < deadline:
-        current = info(slug)
+        try:
+            current = info(slug)
+        except (TimeoutError, urllib.error.URLError, ConnectionError) as exc:
+            if isinstance(exc, urllib.error.HTTPError):
+                raise
+            print(
+                f'[EM Apps] {slug}: Supervisor temporarily unavailable '
+                f'({exc}); retrying...',
+                flush=True
+            )
+            time.sleep(3)
+            continue
         if current and predicate(current):
             return current
         time.sleep(3)
@@ -380,7 +391,26 @@ def reconcile(manifest, repair=False, protect_ssh_session=False):
                         flush=True
                     )
                 else:
-                    request('POST', f'/addons/{slug}/restart', {}, timeout=15)
+                    try:
+                        request(
+                            'POST',
+                            f'/addons/{slug}/restart',
+                            {},
+                            timeout=15
+                        )
+                    except (TimeoutError, urllib.error.URLError) as exc:
+                        if isinstance(exc, urllib.error.HTTPError):
+                            raise
+                        print(
+                            f'[EM Apps] {slug}: restart request interrupted '
+                            f'({exc}); verifying actual App state...',
+                            flush=True
+                        )
+                    wait_for(
+                        slug,
+                        lambda state: state.get('state') == 'started',
+                        seconds=180
+                    )
             elif repair:
                 print(f'[EM Apps] {slug}: configured correctly', flush=True)
 
