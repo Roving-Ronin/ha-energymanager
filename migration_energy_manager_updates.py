@@ -75,6 +75,8 @@ def get_release():
         raise ValueError('GitHub 1.3.0 release is not ready')
     if manifest.get('version') != latest:
         raise ValueError('GitHub manifest does not match latest.txt')
+    if 'integrations/em_scripts.yaml' not in manifest.get('files', {}):
+        raise ValueError('GitHub manifest does not include em_scripts.yaml')
     for path in FILES:
         if path not in manifest.get('files', {}):
             raise ValueError(f'GitHub manifest does not include {path}')
@@ -114,6 +116,25 @@ def atomic_write(path, content, mode=0o600):
 def encode_json(value):
     return (json.dumps(value, ensure_ascii=False, indent=2) + '\n').encode('utf-8')
 
+def migrate_update_button_scripts(existing, replacement):
+    """Replace legacy update buttons, preserving all other user scripts."""
+    start = b'  update_energy_manager:\n'
+    end = b'  # === ENERGY_MANAGER_SCRIPTS_END ==='
+    force = b'  update_energy_manager_force:\n'
+
+    for name, content in (('installed', existing), ('GitHub', replacement)):
+        if content.count(start) != 1 or content.count(end) != 1:
+            raise ValueError(f'{name} em_scripts.yaml has unexpected markers')
+        first = content.index(start)
+        last = content.index(end)
+        if last <= first or content[first:last].count(force) != 1:
+            raise ValueError(f'{name} update script section is invalid')
+
+    old_start = existing.index(start)
+    old_end = existing.index(end)
+    new_start = replacement.index(start)
+    new_end = replacement.index(end)
+    return existing[:old_start] + replacement[new_start:new_end] + existing[old_end:]
 
 def validate_helpers(content):
     text = content.decode('utf-8')
@@ -256,6 +277,12 @@ def migrate():
             compile(content.decode('utf-8'), path, 'exec')
     validate_helpers(payloads['integrations/em_helpers.yaml'])
 
+    scripts_path = CONFIG / 'integrations/em_scripts.yaml'
+    migrated_scripts = migrate_update_button_scripts(
+        scripts_path.read_bytes(),
+        repository_bytes(sha, 'config/integrations/em_scripts.yaml')
+    )
+    
     print('Checking Marketplace readiness and authorisation...', flush=True)
     with tempfile.TemporaryDirectory(prefix='em-migration-marketplace-') as temp_dir:
         marketplace_script = Path(temp_dir) / 'marketplace_manager.py'
@@ -284,6 +311,7 @@ def migrate():
         stopped = True
         edits, migrated, saved_states = plan_storage(CONFIG / '.storage')
         contents = {CONFIG / path: content for path, content in payloads.items()}
+        contents[scripts_path] = migrated_scripts
         contents.update({path: encode_json(document) for path, document in edits.items()})
         backup = em_dir / 'backups' / ('github_updater_migration_' + datetime.now().strftime('%Y%m%d_%H%M%S_%f'))
         backup.mkdir(parents=True, mode=0o700)
