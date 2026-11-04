@@ -126,7 +126,7 @@ views:
       entity: sensor.grid_sell_price
       graph: line
       detail: 1
-      name: Grid Sell Price
+      name: Sell Price
       icon: mdi:currency-usd
       unit: $/kWh
       view_layout:
