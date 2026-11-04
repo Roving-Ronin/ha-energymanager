@@ -101,7 +101,7 @@ Version 2.0 introduces a more streamlined installation and maintenance experienc
 
 - **Pre-configured starting point** — Energy Manager v2.0.0 introduces a new automated installation process, replacing the previous requirement to restore a pre-configured Home Assistant backup. Simply start with a clean Home Assistant OS installation and follow the installation instructions on the Energy Manager website. The installer handles the deployment and configuration of the required Energy Manager components, significantly reducing manual setup.
 - **Automatic component setup** — The Energy Manager installer provisions the required Apps (formerly add-ons), supporting integrations, dashboards and configuration files, reducing the number of manual installation steps.
-- **Guided final configuration** — Some one-time actions, such as GitHub authorisation for HACS where required, still need to be completed by you. You will also connect your supported equipment, select your electricity provider details, configure BOM and Solcast details, and set your preferences.
+- **Guided final configuration** — Some one-time actions, such as GitHub authorisation for Marketplace where required, still need to be completed by you. You will also connect your supported equipment, select your electricity provider details, configure BOM and Solcast details, and set your preferences.
 - **Simpler ongoing updates** — Energy Manager's built-in update tools can check for new versions and update the managed installation, including its supporting components.
 - **Repair and reinstall options** — A force-reinstall option helps restore managed Energy Manager components when an installation needs repair, without requiring you to rebuild everything manually.
 
