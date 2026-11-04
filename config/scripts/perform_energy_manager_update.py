@@ -1027,6 +1027,52 @@ Please check the logs and try again."""
     
     update_dashboard_status(message, "error")
 
+def notify_update_failure(error):
+    """Report background update failure directly to Home Assistant."""
+    token = os.environ.get('SUPERVISOR_TOKEN') or os.environ.get('HASSIO_TOKEN')
+    if not token:
+        print('[EM Update] Cannot notify failure: Supervisor token missing', flush=True)
+        return
+
+    notifications = (
+        ('dismiss', {'notification_id': 'em_updating'}),
+        ('dismiss', {'notification_id': 'em_update_complete'}),
+        ('create', {
+            'notification_id': 'em_update_result',
+            'title': '❌ Energy Manager Update Failed',
+            'message': (
+                'Energy Manager could not complete the update.\n\n'
+                + str(error)[:1500]
+                + '\n\nSee /config/.energy_manager/update-run.log for details.'
+            ),
+        }),
+    )
+
+    for service, payload in notifications:
+        for attempt in range(3):
+            try:
+                request = urllib.request.Request(
+                    'http://supervisor/core/api/services/'
+                    'persistent_notification/' + service,
+                    data=json.dumps(payload).encode('utf-8'),
+                    method='POST',
+                    headers={
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json',
+                    },
+                )
+                with urllib.request.urlopen(request, timeout=15):
+                    pass
+                break
+            except (OSError, urllib.error.URLError) as exc:
+                if attempt == 2:
+                    print(
+                        f'[EM Update] Notification {service} failed: {exc}',
+                        flush=True
+                    )
+                else:
+                    time.sleep(3)
+
 def create_or_update_entity(entity_id, entity_config):
     try:
         entity_type = entity_config.get('entity_type')
@@ -1944,4 +1990,5 @@ except Exception as e:
     update_status_failed(error_message)
     with open('/config/.energy_manager/update_result.txt', 'w') as f:
         f.write(f"error:{error_message}")
+    notify_update_failure(error_message)    
     sys.exit(1)
