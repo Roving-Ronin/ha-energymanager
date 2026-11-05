@@ -225,6 +225,12 @@
       "backup_current": false,
       "new_in_version": "1.2.0"
     },
+    "www/em-events-card.js": {
+      "action": "remove",
+      "description": "Energy Manager Events Card - Deprecated, now Marketplace",
+      "backup_current": false,
+      "new_in_version": "2.0.0"
+    },
     "www/energy-flow-card.js": {
       "action": "replace",
       "description": "Energy Flow Javascript",
@@ -627,7 +633,12 @@
     "url": "/local/energy-manager-layout.js?v=7.3.9",
     "type": "module",
     "new_in_version": "2.0.0"
-    }  
+    },
+    {
+    "url": "/local/em-events-card.js",
+    "action": "remove",
+    "new_in_version": "2.0.0"
+    }
   ],
   "nodered_flows": {
     "download_url": "nodered/flows.json",
