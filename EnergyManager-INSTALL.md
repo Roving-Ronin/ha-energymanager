@@ -52,15 +52,12 @@ After the prompts, the installer automatically:
 
 The terminal **will disconnect during the reboot** under normal circumstances; this is expected. If configuration validation fails, the installer does not request the reboot: review the error shown in the terminal first.
 
-## 5. Perform a Forced Cache Clear
+## 5. Complete the Home Assistant setup
 
-Home Assistant aggressively caches in your local browser. It is extremely important to clear your browser cache before you start using Energy Manager and after every update.  Perform this as follows:
+After Home Assistant is back online, allow its post-reboot setup to complete, then perform a forced cache clear:
+- Press **F12** to enter developer mode in your browser. **Right-click on the refresh button** and select **Empty Cache and Hard Reload**. Press **ESC** to exit developer mode.
 
-Press **F12** to enter developer mode in your browser. **Right-click on the refresh button** and select **Empty Cache and Hard Reload**. Press **ESC** to exit developer mode.
-
-## 6. Complete the Home Assistant setup
-
-After Home Assistant is back online, allow its post-reboot setup to complete, then configure the integrations and settings relevant to your system:
+Configure the integrations and settings relevant to your system:
 
 - Inverter and battery integration (or modify /config/secrets.yaml if using modbus for inverter control)
 - Solcast integration, if details were not entered during installation.
@@ -69,7 +66,7 @@ After Home Assistant is back online, allow its post-reboot setup to complete, th
 
 Use the Energy Manager dashboards to confirm that the required entities, forecasts and device readings are available before enabling automated control.
 
-## 7. Troubleshooting and logs
+## 6. Troubleshooting and logs
 
 The installer saves diagnostic information under `/config/.energy_manager/`. In Advanced SSH & Web Terminal, useful checks include:
 
