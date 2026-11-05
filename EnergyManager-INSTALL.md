@@ -52,7 +52,13 @@ After the prompts, the installer automatically:
 
 The terminal **will disconnect during the reboot** under normal circumstances; this is expected. If configuration validation fails, the installer does not request the reboot: review the error shown in the terminal first.
 
-## 5. Complete the Home Assistant setup
+## 5. Perform a Forced Cache Clear
+
+Home Assistant aggressively caches in your local browser. It is extremely important to clear your browser cache before you start using Energy Manager and after every update.  Perform this as follows:
+
+Press **F12** to enter developer mode in your browser. **Right-click on the refresh button** and select **Empty Cache and Hard Reload**. Press **ESC** to exit developer mode.
+
+## 6. Complete the Home Assistant setup
 
 After Home Assistant is back online, allow its post-reboot setup to complete, then configure the integrations and settings relevant to your system:
 
