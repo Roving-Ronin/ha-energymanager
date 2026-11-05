@@ -69,7 +69,7 @@ After Home Assistant is back online, allow its post-reboot setup to complete, th
 
 Use the Energy Manager dashboards to confirm that the required entities, forecasts and device readings are available before enabling automated control.
 
-## 6. Troubleshooting and logs
+## 7. Troubleshooting and logs
 
 The installer saves diagnostic information under `/config/.energy_manager/`. In Advanced SSH & Web Terminal, useful checks include:
 
