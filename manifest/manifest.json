@@ -243,12 +243,6 @@
       "backup_current": true,
       "new_in_version": "1.2.0"
     },
-    "www/em-events-card.js": {
-      "action": "replace",
-      "description": "Energy Manager Events Card Javascript",
-      "backup_current": true,
-      "new_in_version": "2.0.0"
-    },
     "www/energy-flow.svg": {
       "action": "remove",
       "description": "Energy Flow Light Graphic",
@@ -615,11 +609,6 @@
     "new_in_version": "1.2.0"
     },
     {
-    "url": "/local/em-events-card.js",
-    "type": "module",
-    "new_in_version": "1.2.0"
-    },
-    {
     "url": "/local/energy-manager-wholesale-pricing-card.js?v=5",
     "type": "module",
     "new_in_version": "2.0.0"
@@ -804,6 +793,12 @@
       "action": "install",
       "version": "latest"
     },
+    {
+      "repository": "Roving-Ronin/EMS-Events-Card",
+      "type": "plugin",
+      "action": "install",
+      "version": "latest"
+    },   
     {
       "repository": "BJReplay/ha-solcast-solar",
       "type": "integration",
