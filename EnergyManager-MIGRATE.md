@@ -36,6 +36,12 @@ Home Assistant will force reboot during the update. Once the update has complete
 
 **Please note that the update _will_ take a while, potentially 10 mins or more if you have not updated your apps and components recently, as the update will force install the latest versions of all components.**
 
+## Step 4 - Force Cache Clear
+
+Home Assistant aggressively caches in your local browser. It is extremely important to clear your browser cache before you start using an updated Energy Manager.  Perform this as follows:
+
+Press **F12** to enter developer mode in your browser. **Right-click on the refresh button** and select **Empty Cache and Hard Reload**. Press **ESC** to exit developer mode.
+
 ## All done!
 
 Your Energy Manager installation now uses the new GitHub-based update system. Future updates can be checked for and installed from the same **Energy Manager Updates** section in Home Assistant; the migration script does not need to be run again.
