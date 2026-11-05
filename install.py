@@ -495,6 +495,15 @@ def deploy():
                 resource_type = resource.get('type', 'module')
                 existing = existing_by_url.get(url)
 
+                if resource.get('action') == 'remove':
+                    if existing:
+                        ws.call(
+                            'lovelace/resources/delete',
+                            resource_id=existing['id']
+                        )
+                        print(f"Removed Lovelace resource: {url}")
+                    continue
+                
                 if existing is None:
                     ws.call(
                         'lovelace/resources/create',
