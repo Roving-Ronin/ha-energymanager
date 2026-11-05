@@ -32,7 +32,9 @@ Once Home Assistant has restarted:
 3. Wait for the available version to be displayed.
 4. Click **Install Update** to install the latest Energy Manager version.
 
-Home Assistant will force reboot during the update. Once the update has completed, confirm that Energy Manager is operating normally.
+Home Assistant will force reboot during the update. Once the update has completed, confirm that Energy Manager is operating normally. 
+
+**Please note that the update _will_ take a while, potentially 10 mins or more if you have not updated your apps and components recently, as the update will force install the latest versions of all components.**
 
 ## All done!
 
