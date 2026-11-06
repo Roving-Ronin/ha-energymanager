@@ -185,7 +185,9 @@ views:
             .replace('BY:','Buy band:')
             .replace('SL:','Sell band:')
             .replace('CT:','Curtailment:')
-            .replace('CTD:','Cutailment: Disabled (User override)')
+          %}
+          {% set translated_content = translated_content
+            .replace('CTD:','Curtailment: Disabled (User override)')
             .replace('CRBAMS','Charge Rate: Battery at max SoC')
             .replace('CRNBSTM','Charge Rate: -ve buy, set to max')
             .replace('CRMAR','Charge Rate: Maximum available rate')
