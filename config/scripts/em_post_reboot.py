@@ -21,6 +21,7 @@ STATUS = STATE / 'post-reboot-status.json'
 LOCK = STATE / 'post-reboot.lock'
 SCRIPT = Path('/config/scripts/configure_em_integrations.py')
 INITIALISE_SCRIPT = Path('/config/scripts/em_initialise_states.py')
+STATISTICS_SCRIPT = Path('/config/scripts/em_statistics_repair.py')
 
 def write_status(status, detail=''):
     previous = {}
@@ -176,6 +177,27 @@ def main():
             print(proc.stdout, flush=True)
             if proc.returncode == 0:
                 if update_mode:
+                    if STATISTICS_SCRIPT.is_file():
+                        try:
+                            repair = subprocess.run(
+                                [sys.executable, '-u', str(STATISTICS_SCRIPT)],
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT,
+                                text=True,
+                                timeout=60,
+                            )
+                            print(repair.stdout, flush=True)
+                            if repair.returncode:
+                                print(
+                                    '[EM Post-Reboot] Statistics repair skipped '
+                                    'or failed; manual review may be required',
+                                    flush=True,
+                                )
+                        except (OSError, subprocess.TimeoutExpired) as exc:
+                            print(
+                                f'[EM Post-Reboot] Statistics repair warning: {exc}',
+                                flush=True,
+                            )
                     print(
                         '[EM Post-Reboot] Post-update checks passed; '
                         'sending completion notification',
