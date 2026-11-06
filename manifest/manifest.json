@@ -471,6 +471,12 @@
       "backup_current": true,
       "new_in_version": "2.0.0"
     },
+    "scripts/em_statistics_repair.py": {
+      "action": "replace",
+      "description": "Grid price statistics metadata repair",
+      "backup_current": true,
+      "new_in_version": "2.0.0"
+    },
     "scripts/configure_em_integrations.py": {
       "action": "replace",
       "description": "Integration Configuration Script",
