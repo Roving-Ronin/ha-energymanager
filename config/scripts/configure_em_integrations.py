@@ -83,7 +83,6 @@ def configure_node_red():
     log('Node-RED Companion configuration entry created')
 
 def correct_nodered_entity_ids():
-    """Assign Energy Manager entity IDs using Home Assistant's registry API."""
     from marketplace_manager import HAWebSocket
 
     entry_ids = {
@@ -120,8 +119,6 @@ def correct_nodered_entity_ids():
                         del remaining[old_id]
                         continue
                 
-                    # Look for a renamed Node-RED entity using the expected
-                    # ID with a numeric suffix, e.g. nodered_buyprice_2.
                     candidates = [
                         entity for entity in registry
                         if entity.get('config_entry_id') in entry_ids
@@ -226,8 +223,6 @@ def _discovery_form(entry_id):
 
 
 def ensure_mqtt_discovery_off(entry):
-    # /config/config_entries/entry may omit options. Read the actual options form.
-    # The form defaults reflect the current MQTT options, as seen in the HA UI.
     flow, fields = _discovery_form(entry['entry_id'])
     if fields['discovery'].get('default') is False:
         log('MQTT discovery OFF, verified from current options form')
@@ -249,7 +244,6 @@ def ensure_mqtt_discovery_off(entry):
     result = request('POST', '/options/flow/' + flow['flow_id'], values)
     if result.get('type') != 'create_entry':
         raise RuntimeError('MQTT options update failed: ' + json.dumps(result)[:900])
-    # A new flow reads back persisted MQTT options; entry listing may omit options.
     _, verified_fields = _discovery_form(entry['entry_id'])
     if verified_fields['discovery'].get('default') is not False:
         raise RuntimeError('MQTT discovery OFF could not be verified in refreshed options form')
@@ -257,7 +251,6 @@ def ensure_mqtt_discovery_off(entry):
 
 
 def dismiss_stale_mqtt_repair():
-    """Dismiss the expected MQTT setup warning after successful configuration."""
     from marketplace_manager import HAWebSocket
 
     with HAWebSocket() as ws:
@@ -286,7 +279,6 @@ def dismiss_stale_mqtt_repair():
         log('Stale MQTT setup repair dismissed')
 
 def _home_coordinates():
-    """Use the location configured during Home Assistant onboarding."""
     if not TOKEN:
         raise RuntimeError('Supervisor token missing')
     req = urllib.request.Request(
@@ -303,7 +295,6 @@ def _home_coordinates():
 
 
 def _all_form_choices(flow, field_name):
-    """Select every choice actually offered by the integration's form."""
     field = _option_fields(flow).get(field_name)
     if not field:
         raise RuntimeError(f'BOM form has no {field_name}: {json.dumps(flow)[:900]}')
@@ -341,14 +332,66 @@ def _bom_step(flow, expected_step, values, options=False):
     return result
 
 
-def repair_bom_config(entry):
-    """Repair BOM through its supported options flow, retaining the entry ID."""
+def _bom_weather_registry():
+    from marketplace_manager import HAWebSocket
+
+    with HAWebSocket() as ws:
+        return [
+            entity for entity in ws.call('config/entity_registry/list')
+            if entity.get('entity_id', '').startswith('weather.')
+        ]
+
+
+def _bom_home_entry(existing):
+    by_id = {entry['entry_id']: entry for entry in existing}
+    home = next((e for e in _bom_weather_registry()
+                 if e.get('entity_id') == 'weather.home'), None)
+    if home is None:
+        return None
+    owner = by_id.get(home.get('config_entry_id'))
+    if owner is None or home.get('platform') != 'bureau_of_meteorology':
+        raise RuntimeError('weather.home is already registered by a non-BOM '
+                           'configuration; refusing to create weather.home_2')
+    if home.get('disabled_by'):
+        raise RuntimeError('BOM weather.home is disabled in the entity registry; '
+                           'enable it in Home Assistant before updating')
+    return owner
+
+
+def _restore_existing_bom_home(entry):
+    from marketplace_manager import HAWebSocket
+
+    with HAWebSocket() as ws:
+        candidates = [
+            entity for entity in ws.call('config/entity_registry/list')
+            if entity.get('config_entry_id') == entry['entry_id']
+            and entity.get('platform') == 'bureau_of_meteorology'
+            and re.fullmatch(r'weather\.home_[0-9]+', entity.get('entity_id', ''))
+        ]
+        if len(candidates) > 1:
+            raise RuntimeError('Several suffixed BOM weather entities exist; '
+                               'refusing to guess which one is weather.home')
+        if not candidates:
+            return False
+        entity = candidates[0]
+        if entity.get('disabled_by'):
+            raise RuntimeError('Existing BOM weather entity is disabled: '
+                               + entity['entity_id'])
+        ws.call('config/entity_registry/update',
+                entity_id=entity['entity_id'], new_entity_id='weather.home')
+        log(f"Restored BOM entity ID: {entity['entity_id']} -> weather.home")
+    return True
+
+
+def _australian_location(latitude, longitude):
+    return -44 <= latitude <= -9 and 112 <= longitude <= 154
+
+
+def repair_bom_config(entry, force=False):
 
     def step(flow, expected_step, values):
        return _bom_step(flow, expected_step, values, options=True)
        
-    # The options flow retains the original configuration entry and its
-    # credentials; unlike removing/recreating it, this preserves ownership.
     current = {**(entry.get('data') or {}), **(entry.get('options') or {})}
     fixed = {
         'weather_name': 'home',
@@ -360,14 +403,18 @@ def repair_bom_config(entry):
         'warnings_create': True,
         'forecasts_days': 7,
     }
-    # If all stored options are available, and match, use the read-only path.
-    # Where HA hides options, the flow itself supplies current defaults.
-    if all(current.get(k) == v for k, v in fixed.items()):
+
+    if not force and all(current.get(k) == v for k, v in fixed.items()):
         log('BOM required names, enabled groups and seven-day limit verified')
         return
 
+    latitude = current.get('latitude')
+    longitude = current.get('longitude')
+    if not isinstance(latitude, (int, float)) or not isinstance(longitude, (int, float)):
+        raise RuntimeError('Cannot safely repair BOM: its existing coordinates '
+                           'are not exposed by the config entry')
+
     flow = request('POST', '/options/flow', {'handler': entry['entry_id']})
-    latitude, longitude = _home_coordinates()
     flow = step(flow, 'init', {
         'latitude': latitude, 'longitude': longitude,
     })
@@ -395,21 +442,39 @@ def repair_bom_config(entry):
 
 
 def configure_bom(repair=False):
-    """Configure BOM if absent, or repair it on update."""
     domain = 'bureau_of_meteorology'
     existing = entries(domain)
+    owner = _bom_home_entry(existing)
     if existing:
-        if repair:
-            if len(existing) != 1:
-                raise RuntimeError('Multiple BOM entries; cannot safely choose one to repair')
-            repair_bom_config(existing[0])
-        else:
-            log('BOM already configured; existing entry preserved')
+        if owner:
+            log(f"BOM weather.home belongs to {owner['entry_id']}; "
+                f"preserving all {len(existing)} existing BOM entries")
+            return
+        if not repair:
+            raise RuntimeError('Existing BOM configuration has no weather.home; '
+                               'fresh-install flow will not create a duplicate')
+        if len(existing) != 1:
+            raise RuntimeError('Multiple historical BOM entries but none owns '
+                               'weather.home; cannot safely select one to repair')
+
+        entry = existing[0]
+        if not _restore_existing_bom_home(entry):
+            # Reconfigure the existing entry only; NEVER start a new setup flow.
+            # Force this even if stored options claim to be correct: the entity
+            # registry is the authoritative check for weather.home.
+            repair_bom_config(entry, force=True)
+        if _bom_home_entry(existing) is None:
+            raise RuntimeError('BOM repair completed but weather.home is still '
+                               'missing; no additional BOM entry will be created')
         return
     if not Path(f'/config/custom_components/{domain}/manifest.json').is_file():
         raise RuntimeError('BOM integration files missing; Marketplace install must run first')
 
     latitude, longitude = _home_coordinates()
+    if not _australian_location(latitude, longitude):
+        raise RuntimeError('Home Assistant location is outside mainland Australia '
+                           'and Tasmania. Set Settings > System > Home information '
+                           'before configuring BOM')
     log(f'Configuring BOM with Home Assistant coordinates: {latitude}, {longitude}')
     flow = start_flow(domain)
     flow = _bom_step(flow, 'user', {
@@ -438,6 +503,8 @@ def configure_bom(repair=False):
         raise RuntimeError('BOM configuration did not complete: ' + json.dumps(flow)[:900])
     if not entries(domain):
         raise RuntimeError('BOM config flow completed but no configuration entry exists')
+    if _bom_home_entry(entries(domain)) is None:
+        raise RuntimeError('BOM setup completed but weather.home was not registered')
     log(
         f'BOM configured: all {len(observations)} observations, '
         f'all {len(forecasts)} forecast sensor types, warnings, '
@@ -445,7 +512,6 @@ def configure_bom(repair=False):
     )
 
 def configure_solcast():
-    """Configure Solcast once on a vanilla instance; never enable its own scheduler."""
     domain = 'solcast_solar'
     if not SECRETS_FILE.is_file():
         log('No staged onboarding credentials; Solcast setup skipped')
@@ -459,8 +525,7 @@ def configure_solcast():
         raise RuntimeError('Solcast is already configured; fresh-install onboarding refuses to overwrite it')
     if not Path('/config/custom_components/solcast_solar/manifest.json').is_file():
         raise RuntimeError('Solcast files missing; Marketplace must install them before reboot')
-    # Solcast's current config flow requires api_key, api_limit and auto_update.
-    # 0 = never update automatically. EM's existing automation owns daily refresh.
+
     flow = start_flow(domain)
     if flow.get('type') != 'form' or flow.get('step_id') != 'user':
         raise RuntimeError('Unexpected Solcast config flow: ' + repr(flow.get('step_id')))
@@ -470,7 +535,6 @@ def configure_solcast():
         'auto_update': '0',
     })
     if result.get('type') != 'create_entry':
-        # Avoid including the result in logs: errors may contain API key details.
         raise RuntimeError('Solcast onboarding failed; check integration flow errors in Home Assistant')
     if not entries(domain):
         raise RuntimeError('Solcast config entry was not created')
@@ -491,7 +555,6 @@ def main():
     if args.mode == 'install':
         configure_solcast()
     else:
-        # Never consume installer secrets or start a Solcast config flow on update.
         log('Solcast onboarding skipped on update; credentials and settings preserved')
     log('Integration reconciliation completed successfully')
 
