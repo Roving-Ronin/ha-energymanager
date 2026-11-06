@@ -148,8 +148,7 @@ views:
         {% set file_content = states('sensor.energy_manager_decision') |
         string %}
 
-        {% if file_content | trim == '' or file_content in ['unknown',
-        'unavailable', 'Unknown'] %}
+        {% if file_content | trim == '' or file_content in ['unknown', 'unavailable', 'Unknown'] %}
           <i>The decision will be displayed once you have successfully queried the Energy Manager API.<p>Connectivity will not occur until your
         Amber Electric/LocalVolts pricing is received (if applicable), and your BOM integration is working. You must also have entered your Energy
         Manager API key. Only after this will Energy Manager attempt to connect through to the Energy Manager API servers.</p></i>
@@ -212,7 +211,7 @@ views:
             .replace('1CBLFC:','1pm, cheap, batt low, force charge')
             .replace('LGFC:','low gen, force charge')
             .replace('CGBEFC','Cheap, gen not enough, force charge')
-            .replace('DFCDSI','Don't force charge, don't shut inverter')
+            .replace('DFCDSI','Do not force charge, do not shut inverter')
             .replace('PBGBC','Preserve battery - grid < battery cost')
             .replace('10NDPB','10am, not demand, preserving battery - cheap grid')
             .replace('10NPBUB','10am - not preserving battery, use of battery ok')
