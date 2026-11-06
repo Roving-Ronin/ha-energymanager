@@ -2789,6 +2789,7 @@ template:
     unique_id: em_yaml_grid_buy_price
     default_entity_id: sensor.grid_buy_price
     state: "{{ states('sensor.nodered_buyprice') | float(0) | round(5) }}"
+    state_class: measurement
     unit_of_measurement: "$/kWh"
     availability: "{{ has_value('sensor.nodered_buyprice') }}"
     
@@ -2796,6 +2797,7 @@ template:
     unique_id: em_yaml_grid_sell_price
     default_entity_id: sensor.grid_sell_price
     state: "{{ states('sensor.nodered_sellprice') | float(0) | round(5) }}"
+    state_class: measurement
     unit_of_measurement: "$/kWh"
     availability: "{{ has_value('sensor.nodered_sellprice') }}"
     
