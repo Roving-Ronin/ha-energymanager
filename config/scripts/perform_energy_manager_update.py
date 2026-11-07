@@ -1859,6 +1859,7 @@ try:
         )
 
         try:
+            from em_apps_manager import wait_for
             if not token:
                 raise RuntimeError('Supervisor token unavailable')
 
@@ -1872,7 +1873,7 @@ try:
                 }
             )
 
-            with urllib.request.urlopen(request, timeout=30) as response:
+            with urllib.request.urlopen(request, timeout=60) as response:
                 result = json.load(response)
 
             if result.get('result') == 'error':
@@ -1880,17 +1881,37 @@ try:
                     result.get('message', 'Supervisor rejected restart')
                 )
 
-            print("✅ Node-RED restart initiated")
+            print("✅ Node-RED restart request completed")
 
-        except (urllib.error.URLError, TimeoutError,
-                OSError, ValueError, RuntimeError) as exc:
-            print(f"⚠ Supervisor Node-RED restart failed: {exc}")
-            print("Attempting Node-RED restart via SSH...")
-            if not _restart_nodered_via_ssh():
-                print("❌ Node-RED restart failed")
+        except urllib.error.HTTPError as exc:
+            print(f"❌ Supervisor rejected Node-RED restart: {exc}")
+            success = False
+            update_failures.append(f"Node-RED restart rejected: {exc}")
+
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            print(
+                f"⚠ Node-RED restart request interrupted ({exc}); "
+                "checking actual App state..."
+            )
+
+        except (ValueError, RuntimeError) as exc:
+            print(f"❌ Node-RED restart request failed: {exc}")
+            success = False
+            update_failures.append(f"Node-RED restart failed: {exc}")
+
+        if success:
+            try:
+                wait_for(
+                    'a0d7b954_nodered',
+                    lambda state: state.get('state') == 'started',
+                    seconds=180
+                )
+                print("✅ Node-RED is running after restart")
+            except Exception as exc:
+                print(f"❌ Node-RED did not return to started: {exc}")
                 success = False
                 update_failures.append(
-                    f"Node-RED restart failed: Supervisor error: {exc}; SSH fallback failed"
+                    f"Node-RED restart verification failed: {exc}"
                 )
     
     if success:
