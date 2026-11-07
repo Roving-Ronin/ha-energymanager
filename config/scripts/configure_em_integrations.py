@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Set up MQTT, Node-RED Companion, BOM and Solcast following the Marketplace reboot.
 
-Uses Home Assistant's HTTP config flows. Never edits .storage directly.
 Fresh-install Solcast configuration: API limit 10; automatic updates OFF.
 """
 import json
@@ -350,11 +349,36 @@ def _bom_home_entry(existing):
         return None
     owner = by_id.get(home.get('config_entry_id'))
     if owner is None or home.get('platform') != 'bureau_of_meteorology':
-        raise RuntimeError('weather.home is already registered by a non-BOM '
-                           'configuration; refusing to create weather.home_2')
+        log('WARNING: weather.home registry owner does not match a listed '
+            'BOM entry (platform=%s, entry_id=%s); no ownership assumed' % (
+                home.get('platform'), home.get('config_entry_id')))
+        return None
     if home.get('disabled_by'):
-        raise RuntimeError('BOM weather.home is disabled in the entity registry; '
-                           'enable it in Home Assistant before updating')
+        from marketplace_manager import HAWebSocket
+
+        log('BOM weather.home is disabled by %s; enabling it' % home['disabled_by'])
+        with HAWebSocket() as ws:
+            ws.call('config/entity_registry/update',
+                    entity_id='weather.home', disabled_by=None)
+        payload = json.dumps({'entry_id': owner['entry_id']}).encode('utf-8')
+        reload_request = urllib.request.Request(
+            'http://supervisor/core/api/services/homeassistant/reload_config_entry',
+            data=payload, method='POST',
+            headers={'Authorization': 'Bearer ' + TOKEN,
+                     'Content-Type': 'application/json'},
+        )
+        with urllib.request.urlopen(reload_request, timeout=60):
+            pass
+        for attempt in range(10):
+            current = next((entity for entity in _bom_weather_registry()
+                            if entity.get('entity_id') == 'weather.home'), None)
+            if current and not current.get('disabled_by'):
+                break
+            time.sleep(2)
+        else:
+            raise RuntimeError('Unable to enable BOM weather.home; '
+                               'the required weather entity remains disabled')
+        log('BOM weather.home enabled; existing configuration preserved')
     return owner
 
 
@@ -441,41 +465,42 @@ def repair_bom_config(entry, force=False):
     log('BOM configuration repaired using its existing entry')
 
 
-def configure_bom(repair=False):
-    domain = 'bureau_of_meteorology'
-    existing = entries(domain)
-    owner = _bom_home_entry(existing)
-    if existing:
-        if owner:
-            log(f"BOM weather.home belongs to {owner['entry_id']}; "
-                f"preserving all {len(existing)} existing BOM entries")
-            return
-        if not repair:
-            raise RuntimeError('Existing BOM configuration has no weather.home; '
-                               'fresh-install flow will not create a duplicate')
-        if len(existing) != 1:
-            raise RuntimeError('Multiple historical BOM entries but none owns '
-                               'weather.home; cannot safely select one to repair')
+def _bom_entry_coordinates(entry):
+    current = {**(entry.get('data') or {}), **(entry.get('options') or {})}
+    latitude, longitude = current.get('latitude'), current.get('longitude')
+    if not isinstance(latitude, (int, float)) or not isinstance(longitude, (int, float)):
+        raise RuntimeError('BOM original coordinates unavailable; refusing to replace its location')
+    return float(latitude), float(longitude)
 
-        entry = existing[0]
-        if not _restore_existing_bom_home(entry):
-            # Reconfigure the existing entry only; NEVER start a new setup flow.
-            # Force this even if stored options claim to be correct: the entity
-            # registry is the authoritative check for weather.home.
-            repair_bom_config(entry, force=True)
-        if _bom_home_entry(existing) is None:
-            raise RuntimeError('BOM repair completed but weather.home is still '
-                               'missing; no additional BOM entry will be created')
-        return
+
+def _reload_bom(entry):
+    payload = json.dumps({'entry_id': entry['entry_id']}).encode('utf-8')
+    req = urllib.request.Request(
+        'http://supervisor/core/api/services/homeassistant/reload_config_entry',
+        data=payload, method='POST',
+        headers={'Authorization': 'Bearer ' + TOKEN, 'Content-Type': 'application/json'},
+    )
+    with urllib.request.urlopen(req, timeout=90):
+        pass
+
+
+def _wait_for_bom_home():
+    for _ in range(15):
+        owner = _bom_home_entry(entries('bureau_of_meteorology'))
+        if owner:
+            return owner
+        time.sleep(2)
+    return None
+
+
+def _create_bom_at(latitude, longitude):
+    domain = 'bureau_of_meteorology'
     if not Path(f'/config/custom_components/{domain}/manifest.json').is_file():
         raise RuntimeError('BOM integration files missing; Marketplace install must run first')
 
-    latitude, longitude = _home_coordinates()
     if not _australian_location(latitude, longitude):
-        raise RuntimeError('Home Assistant location is outside mainland Australia '
-                           'and Tasmania. Set Settings > System > Home information '
-                           'before configuring BOM')
-    log(f'Configuring BOM with Home Assistant coordinates: {latitude}, {longitude}')
+        raise RuntimeError('BOM coordinates are outside Australia; configure the Home Assistant location')
+    log(f'Configuring BOM at coordinates: {latitude}, {longitude}')
     flow = start_flow(domain)
     flow = _bom_step(flow, 'user', {
         'latitude': latitude,
@@ -501,15 +526,88 @@ def configure_bom(repair=False):
     flow = _bom_step(flow, 'warnings_basename', {'warnings_basename': 'home'})
     if flow.get('type') != 'create_entry':
         raise RuntimeError('BOM configuration did not complete: ' + json.dumps(flow)[:900])
-    if not entries(domain):
+    if not entries('bureau_of_meteorology'):
         raise RuntimeError('BOM config flow completed but no configuration entry exists')
     if _bom_home_entry(entries(domain)) is None:
         raise RuntimeError('BOM setup completed but weather.home was not registered')
+    for attempt in range(10):
+        if _bom_home_entry(entries('bureau_of_meteorology')) is not None:
+            break
+        time.sleep(2)
+    else:
+        raise RuntimeError('BOM setup created a config entry but weather.home '
+                           'is not registered; retry will reuse that entry')
     log(
         f'BOM configured: all {len(observations)} observations, '
         f'all {len(forecasts)} forecast sensor types, warnings, '
         '7 forecast days; all basenames home'
     )
+
+def configure_bom(repair=False):
+    domain = 'bureau_of_meteorology'
+    existing = entries(domain)
+    owner = _bom_home_entry(existing)
+    if owner:
+        log(f"BOM weather.home verified in {owner['entry_id']}; "
+            f"preserving {len(existing)} existing BOM configuration(s)")
+        return
+
+    home = next((e for e in _bom_weather_registry()
+                 if e.get('entity_id') == 'weather.home'), None)
+    if home is not None:
+        raise RuntimeError('weather.home exists, but is not owned by a listed '
+                           'BOM entry (platform=%s, entry_id=%s)' % (
+                               home.get('platform'), home.get('config_entry_id')))
+
+    if not existing:
+        latitude, longitude = _home_coordinates()
+        _create_bom_at(latitude, longitude)
+        if not _wait_for_bom_home():
+            raise RuntimeError('BOM setup did not create an enabled weather.home')
+        return
+
+    for entry in existing:
+        if _restore_existing_bom_home(entry):
+            if not _wait_for_bom_home():
+                raise RuntimeError('BOM weather.home rename failed verification')
+            return
+
+    for entry in existing:
+        _reload_bom(entry)
+        if _wait_for_bom_home():
+            log('BOM weather.home recovered by reloading existing entry')
+            return
+
+    coords = [_bom_entry_coordinates(entry) for entry in existing]
+    latitude, longitude = coords[0]
+    if any(abs(lat - latitude) > 0.00001 or abs(lon - longitude) > 0.00001
+           for lat, lon in coords[1:]):
+        raise RuntimeError('BOM entries have differing coordinates; refusing '
+                           'to silently change any existing location')
+    if not _australian_location(latitude, longitude):
+        raise RuntimeError('Existing BOM coordinates are outside Australia; '
+                           'refusing to rebuild with an incorrect location')
+
+    try:
+        repair_bom_config(existing[0], force=True)
+        _reload_bom(existing[0])
+        if _wait_for_bom_home():
+            log('BOM weather.home created through existing configuration')
+            return
+    except (RuntimeError, urllib.error.URLError, TimeoutError, OSError) as exc:
+        log(f'BOM in-place repair unsuccessful: {exc}; rebuilding original entries')
+
+    log(f'BOM weather.home still absent; rebuilding {len(existing)} broken '
+        'configuration entry/entries at their original coordinates')
+    for entry in existing:
+        request('DELETE', '/entry/' + entry['entry_id'])
+    if entries(domain):
+        raise RuntimeError('BOM removal incomplete; not creating another entry')
+    _create_bom_at(latitude, longitude)
+    if not _wait_for_bom_home():
+        raise RuntimeError('BOM recreation failed to create enabled weather.home')
+    log('BOM weather.home recreated successfully')
+
 
 def configure_solcast():
     domain = 'solcast_solar'
