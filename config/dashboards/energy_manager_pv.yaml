@@ -201,7 +201,25 @@ views:
         em_width: 12
         em_name: Flow Power PEA Watch
         em_column: 0
-        em_order: 0
+        em_order: 2
+    - type: conditional
+      conditions:
+      - entity: input_select.electricity_provider
+        state: "Flow Power"
+      card:
+        type: sensor
+        entity: sensor.grid_sell_price
+        graph: line
+        detail: 1
+        name: AEMO Price
+        icon: mdi:currency-usd
+        unit: $/kWh
+      view_layout:
+        em_id: AEMO-price
+        em_width: 12
+        em_name: AEMO Price
+        em_column: 0
+        em_order: 3
     - type: markdown
       content: >
         {% if is_state('switch.energy_control_on_off', 'on') %}
@@ -335,7 +353,7 @@ views:
         em_width: 12
         em_name: Energy Manager Decision
         em_column: 0
-        em_order: 2
+        em_order: 4
         em_required: true
     - type: conditional
       conditions:
@@ -355,7 +373,7 @@ views:
         em_width: 12
         em_name: EV Charging Decision
         em_column: 0
-        em_order: 3
+        em_order: 5
         em_required: true
     - show_name: true
       show_icon: true
@@ -374,7 +392,7 @@ views:
         em_width: 4
         em_name: Energy Control Switch
         em_column: 0
-        em_order: 4
+        em_order: 6
         em_required: true
     - type: conditional
       grid_options:
@@ -396,7 +414,7 @@ views:
         em_width: 4
         em_name: High Sell Price Mode
         em_column: 0
-        em_order: 6
+        em_order: 8
     - type: conditional
       grid_options:
         columns: 4
@@ -417,7 +435,7 @@ views:
         em_width: 4
         em_name: Sell/Buy Mode
         em_column: 0
-        em_order: 5
+        em_order: 7
     - type: entities
       entities:
       - entity: input_boolean.energy_control_auto_reenable
@@ -427,7 +445,7 @@ views:
         em_width: 8
         em_name: Auto-reenable EM toggle
         em_column: 0
-        em_order: 7
+        em_order: 9
         em_required: true
     - type: conditional
       conditions:
@@ -446,7 +464,7 @@ views:
         em_width: 12
         em_name: Auto-reenable Timer
         em_column: 0
-        em_order: 8
+        em_order: 10
         em_required: true
     - type: conditional
       conditions:
@@ -475,7 +493,7 @@ views:
         em_width: 12
         em_name: Node-RED warning
         em_column: 0
-        em_order: 11
+        em_order: 13
     - type: markdown
       entity_id:
       - sensor.energy_manager_plan
@@ -562,7 +580,7 @@ views:
         em_width: 12
         em_name: Future Decisions
         em_column: 0
-        em_order: 9
+        em_order: 11
     - type: conditional
       conditions:
       - entity: input_select.electricity_provider
@@ -2039,7 +2057,7 @@ views:
         em_width: 12
         em_name: System Status
         em_column: 0
-        em_order: 10
+        em_order: 12
         em_hidden: true
     - type: entities
       title: System Information
