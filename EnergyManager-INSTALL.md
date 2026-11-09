@@ -2,7 +2,7 @@
 
 Energy Manager v2.0.0 is installed on a **fresh, dedicated Home Assistant OS** installation. It is not intended to be added to an existing, customised Home Assistant system.
 
-This guide assumes Home Assistant OS has already been installed and its initial setup completed.
+This guide assumes Home Assistant OS has already been installed and its initial setup completed. It assumes that you have accurately set your location during your account creation within Home Assstant.
 
 > **Requirement:** Home Assistant Core **2026.11 or newer**. Update Home Assistant before starting if necessary.
 
