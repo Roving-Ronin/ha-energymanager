@@ -340,6 +340,35 @@ def _bom_weather_registry():
             if entity.get('entity_id', '').startswith('weather.')
         ]
 
+def remove_met_on_fresh_install():
+    configured = entries('met')
+    if not configured:
+        return
+
+    log(f'Removing {len(configured)} Home Assistant onboarding Met.no '
+        'configuration(s) before BOM setup')
+    met_ids = {entry['entry_id'] for entry in configured}
+    for entry in configured:
+        request('DELETE', '/entry/' + entry['entry_id'])
+        log('Removed Met.no configuration entry: ' + entry['entry_id'])
+
+    for attempt in range(30):
+        remaining = entries('met')
+        registry = _bom_weather_registry()
+        met_entities = [entity for entity in registry
+                        if entity.get('config_entry_id') in met_ids]
+        home = next((entity for entity in registry
+                     if entity.get('entity_id') == 'weather.home'), None)
+        if not remaining and not met_entities and (
+            home is None or home.get('platform') != 'met'
+        ):
+            log('Met.no removed; weather.home is free for BOM')
+            return
+        time.sleep(2)
+
+    raise RuntimeError('Met.no removal did not finish; refusing to start '
+                       'BOM while weather.home may still be occupied')
+
 
 def _bom_home_entry(existing):
     by_id = {entry['entry_id']: entry for entry in existing}
@@ -493,7 +522,7 @@ def _wait_for_bom_home():
     return None
 
 
-def _create_bom_at(latitude, longitude):
+def _create_bom_at(latitude, longitude, fresh_install=False):
     domain = 'bureau_of_meteorology'
     if not Path(f'/config/custom_components/{domain}/manifest.json').is_file():
         raise RuntimeError('BOM integration files missing; Marketplace install must run first')
@@ -528,7 +557,7 @@ def _create_bom_at(latitude, longitude):
         raise RuntimeError('BOM configuration did not complete: ' + json.dumps(flow)[:900])
     if not entries('bureau_of_meteorology'):
         raise RuntimeError('BOM config flow completed but no configuration entry exists')
-    if _bom_home_entry(entries(domain)) is None:
+    if not fresh_install and _bom_home_entry(entries(domain)) is None:
         raise RuntimeError('BOM setup completed but weather.home was not registered')
     for attempt in range(10):
         if _bom_home_entry(entries('bureau_of_meteorology')) is not None:
@@ -561,7 +590,7 @@ def configure_bom(repair=False):
 
     if not existing:
         latitude, longitude = _home_coordinates()
-        _create_bom_at(latitude, longitude)
+        _create_bom_at(latitude, longitude, fresh_install=not repair)
         if not _wait_for_bom_home():
             raise RuntimeError('BOM setup did not create an enabled weather.home')
         return
@@ -729,6 +758,8 @@ def main():
     ensure_mqtt_discovery_off(entry)
     dismiss_stale_mqtt_repair()
     correct_nodered_entity_ids()
+    if args.mode == 'install':
+        remove_met_on_fresh_install()
     configure_bom(repair=args.mode == 'update')
     if args.mode == 'install':
         configure_solcast()
