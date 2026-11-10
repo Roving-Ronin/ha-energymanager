@@ -101,7 +101,6 @@ class EnergyManagerUpdateChecker:
             return response.read()
 
     def pin_branch(self):
-        """Use one commit for metadata and payload so a moving branch cannot mix releases."""
         url = ('https://api.github.com/repos/' + self.repository + '/commits/' + self.branch)
         data = json.loads(self._read(url))
         sha = data.get('sha', '')
