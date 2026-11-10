@@ -117,7 +117,6 @@ def encode_json(value):
     return (json.dumps(value, ensure_ascii=False, indent=2) + '\n').encode('utf-8')
 
 def migrate_update_button_scripts(existing, replacement):
-    """Replace legacy update buttons, preserving all other user scripts."""
     start = b'  update_energy_manager:\n'
     end = b'  # === ENERGY_MANAGER_SCRIPTS_END ==='
     force = b'  update_energy_manager_force:\n'
