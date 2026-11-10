@@ -344,7 +344,7 @@ input_text.solcast_array_2,""
 input_text.solcast_key,""
 input_text.ssh_key_dismissed,false
 input_text.ssh_key_status,unknown
-input_text.timezone,ADST
+input_text.timezone,AEDT
 number.battery_2a,79
 number.battery_3a,64
 number.battery_4a,49
