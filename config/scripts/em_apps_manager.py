@@ -90,7 +90,6 @@ def ensure_key_for_new_ssh():
     return pub.read_text(encoding='utf-8').strip()
 
 def reconcile_nodered_dependencies(manifest):
-    """Repair required Node-RED npm dependencies without replacing user files."""
     required = manifest.get('nodered_dependencies', {})
     if not required:
         return
