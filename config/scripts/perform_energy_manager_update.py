@@ -49,7 +49,6 @@ def create_update_snapshot(manifest):
         else:
             paths.add(str(Path('/config') / filepath))
 
-    # Files modified by legacy cleanup or update bookkeeping.
     paths.update((
         '/config/configuration.yaml',
         '/config/automations.yaml',
@@ -109,7 +108,6 @@ def create_update_snapshot(manifest):
 
 
 def restore_update_snapshot(snapshot_dir):
-    """Restore only files recorded in the current attempt's snapshot."""
     import filecmp
     import shutil
     import tempfile
@@ -176,7 +174,6 @@ def restore_update_snapshot(snapshot_dir):
     )
 
 def validate_home_assistant_config():
-    """Validate the deployed Home Assistant configuration without rebooting."""
     import urllib.request
     import urllib.error
 
@@ -231,7 +228,6 @@ def validate_home_assistant_config():
 
 
 def prepare_post_update_reboot(force_reinstall=False):
-    """Register post-reboot checks and arm the one-time update task."""
     from pathlib import Path
     import urllib.request
 
@@ -291,7 +287,6 @@ def prepare_post_update_reboot(force_reinstall=False):
         options['init_commands'] = commands
         supervisor('POST', addon + 'options', {'options': options})
 
-    # Confirm that the SSH App retained the startup command.
     verified = supervisor('GET', addon + 'info')
     saved_commands = (
         (verified.get('options') or {}).get('init_commands') or []
@@ -321,7 +316,6 @@ def prepare_post_update_reboot(force_reinstall=False):
 
 
 def reboot_home_assistant_os(token):
-    """Force a full Home Assistant OS reboot after successful update."""
     import urllib.request
     import urllib.error
 
@@ -349,7 +343,6 @@ def reboot_home_assistant_os(token):
             f'Supervisor refused OS reboot: HTTP {exc.code}'
         ) from exc
     except (TimeoutError, ConnectionError, urllib.error.URLError) as exc:
-        # Supervisor may disconnect while restarting the host.
         print(
             'Reboot request connection interrupted; '
             'the host may already be rebooting: ' + str(exc),
@@ -701,7 +694,6 @@ def test_ssh_key_authentication():
         return False
 
 def _read_remote_text_via_ssh(remote_path):
-    """Read remote text file via SSH. Returns text or None."""
     ssh_key_path = '/config/.energy_manager/ssh_key'
     ssh_target = 'a0d7b954-ssh.local.hass.io'
     ssh_username = 'hassio'
@@ -723,7 +715,6 @@ def _read_remote_text_via_ssh(remote_path):
         return None
 
 def _merge_energy_manager_tabs(current_flows_str, new_flows_str, prefix='EnergyManager-'):
-    """Replace only tabs whose label starts with prefix (and their nodes), plus any referenced subflow definitions."""
     try:
         cur = json.loads(current_flows_str)
         new = json.loads(new_flows_str)
@@ -1028,7 +1019,6 @@ Please check the logs and try again."""
     update_dashboard_status(message, "error")
 
 def notify_update_failure(error):
-    """Report background update failure directly to Home Assistant."""
     token = os.environ.get('SUPERVISOR_TOKEN') or os.environ.get('HASSIO_TOKEN')
     if not token:
         print('[EM Update] Cannot notify failure: Supervisor token missing', flush=True)
@@ -1388,7 +1378,6 @@ def reload_home_assistant_config():
         return False
 
 def update_lovelace_resources(manifest):
-    """Reconcile Lovelace resources using Home Assistant's WebSocket API."""
     print("=== Reconciling Lovelace Resources ===")
 
     resources_config = manifest.get('lovelace_resources') or []
@@ -1582,7 +1571,6 @@ em_placeholder_do_not_remove:
         print(f'Removed legacy EM placeholder from {filename}')
 
 def cleanup_obsolete_em_sections(file_merger, version):
-    """Remove only known, unchanged, obsolete EM configuration sections."""
     import re
     from pathlib import Path
 
@@ -1677,7 +1665,6 @@ try:
             f.write("error:Failed to download manifest")
         sys.exit(1)
 
-    # Energy Manager 2.0.0 requires Home Assistant 2026.11+ and Marketplace.
     require_marketplace()
 
     rollback_snapshot = create_update_snapshot(manifest)
