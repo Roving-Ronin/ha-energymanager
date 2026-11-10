@@ -13,8 +13,6 @@ REPOSITORY = os.environ.get('EM_UPDATE_REPOSITORY', 'ha-energymanager/ha-energym
 BRANCHES = ('main', 'early', 'test', 'development')
 SCRIPTS_DIR = Path('/config/scripts')
 
-# Files required by the check and update entry points.
-# All are retrieved from the same pinned commit.
 CHECK_FILES = ('update_checker.py', 'marketplace_manager.py',
                'check_energy_manager_updates.py', 'em_updater_bootstrap.py')
 UPDATE_FILES = CHECK_FILES + ('perform_energy_manager_update.py',
@@ -75,7 +73,6 @@ def refresh_updater(branch, mode='check'):
                 handle.write(payload)
             os.chmod(path, 0o644)
 
-        # Only modify installed files after every download was verified.
         for name, path in staged.items():
             os.replace(path, SCRIPTS_DIR / name)
 
