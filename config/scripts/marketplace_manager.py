@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""Energy Manager Marketplace component management for HA Core 2026.11+.
-
-Runs from the Advanced SSH & Web Terminal App, with SUPERVISOR_TOKEN.
-Accepts the Marketplace warning only after explicit terminal consent.
-"""
+"""Energy Manager Marketplace component management for HA Core 2026.11+."""
 import argparse
 import base64
 import hashlib
@@ -27,7 +23,6 @@ INTEGRATIONS = {
 CATEGORIES = {'integration', 'plugin', 'theme', 'template'}
 
 def require_marketplace():
-    """Fail before any installation changes on older Home Assistant Core."""
     token = os.environ.get('SUPERVISOR_TOKEN') or os.environ.get('HASSIO_TOKEN')
     if not token:
         raise RuntimeError('Supervisor token unavailable; run from Advanced SSH & Web Terminal')
@@ -50,7 +45,6 @@ def require_marketplace():
 
 
 class HAWebSocket:
-    """Minimal authenticated Home Assistant WebSocket client, no third-party deps."""
     def __init__(self):
         token = os.environ.get('SUPERVISOR_TOKEN') or os.environ.get('HASSIO_TOKEN')
         if not token:
@@ -176,7 +170,6 @@ def validate_components(entries):
 
 
 def _remove_legacy_directory(relative_path):
-    """Only remove a known legacy HACS resource path when Marketplace lacks it."""
     if not isinstance(relative_path, str):
         raise ValueError('Missing legacy removal path')
     path = Path(relative_path)
@@ -192,7 +185,6 @@ def _remove_legacy_directory(relative_path):
 
 
 def check_marketplace(ws, ask_consent=False):
-    """Only acknowledge the warning after explicit approval on this session."""
     info = ws.call('marketplace/info')
     if info.get('stage') != 'running':
         raise RuntimeError('Marketplace is not ready (stage: %s)' % info.get('stage'))
@@ -227,7 +219,6 @@ def check_marketplace(ws, ask_consent=False):
     return info
 
 def marketplace_api(method, path, data=None):
-    """Call Home Assistant's config-flow API without exposing credentials."""
     token = os.environ.get('SUPERVISOR_TOKEN') or os.environ.get('HASSIO_TOKEN')
     if not token:
         raise RuntimeError('Supervisor token unavailable')
@@ -247,7 +238,6 @@ def marketplace_api(method, path, data=None):
 
 
 def ensure_marketplace_github(ws, interactive=False):
-    """Connect Marketplace to GitHub through its existing OAuth device flow."""
     info = ws.call('marketplace/info')
     if info.get('github_connected') is True:
         print('[EM Marketplace] GitHub authentication verified', flush=True)
@@ -278,8 +268,6 @@ def ensure_marketplace_github(ws, interactive=False):
             + str(len(marketplace_entries))
         )
 
-    # Passing entry_id initiates the reconfigure flow rather than
-    # creating another Marketplace integration.
     flow = marketplace_api('POST', '/flow', {
         'handler': 'marketplace',
         'entry_id': marketplace_entries[0]['entry_id'],
@@ -295,8 +283,6 @@ def ensure_marketplace_github(ws, interactive=False):
     path = '/flow/' + flow_id
 
     try:
-        # Accept the initial confirmation form. Home Assistant then
-        # registers the GitHub device-authorisation request.
         flow = marketplace_api('POST', path, {})
 
         if flow.get('type') not in ('progress', 'show_progress'):
@@ -322,8 +308,6 @@ def ensure_marketplace_github(ws, interactive=False):
         print('  3. Authorise Home Assistant Marketplace', flush=True)
         print('=' * 58 + '\n', flush=True)
 
-        # Home Assistant's device flow checks for GitHub approval.
-        # Advance the same flow until authentication completes.
         deadline = time.monotonic() + 600
 
         while time.monotonic() < deadline:
@@ -355,14 +339,12 @@ def ensure_marketplace_github(ws, interactive=False):
             )
 
     except Exception:
-        # Abandon the unfinished flow when possible.
         try:
             marketplace_api('DELETE', path)
         except Exception:
             pass
         raise
 
-    # Marketplace reloads after a successful reconfiguration.
     deadline = time.monotonic() + 60
 
     while time.monotonic() < deadline:
@@ -384,7 +366,6 @@ def ensure_marketplace_github(ws, interactive=False):
     )
 
 def sync_marketplace_components(entries, dry_run=False, repair=False):
-    """Reconcile required versions; repair also reinstalls matching versions."""
     validate_components(entries)
     require_marketplace()
     changes = []
@@ -417,8 +398,6 @@ def sync_marketplace_components(entries, dry_run=False, repair=False):
             if action == 'remove':
                 needed = installed
             else:
-                # Normal updates correct version drift. Force reinstall additionally
-                # repairs components whose installed version already matches.
                 needed = (not installed or files_missing or
                           bool(target and repo.get('installed_version') != target))
             if not needed:
@@ -456,7 +435,6 @@ def sync_marketplace_components(entries, dry_run=False, repair=False):
     return changes
 
 def sync_marketplace_components_via_ssh(entries, dry_run=False, repair=False):
-    """Run Marketplace operations in the Advanced SSH App with Supervisor token."""
     import shlex
     import subprocess
     validate_components(entries)
