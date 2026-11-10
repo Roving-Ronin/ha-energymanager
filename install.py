@@ -142,7 +142,6 @@ def install_apps():
     os.replace(temporary, manifest_file)
 
     log(f'Reconciling {len(apps)} Supervisor Apps and Node-RED dependencies')
-    # Run in the foreground: all App manager output stays visible.
     run([sys.executable, '-u', str(manager), '--manifest', str(manifest_file)])
     log('Supervisor App installation and Node-RED dependencies complete')
 
@@ -210,9 +209,8 @@ def _install_base_yaml(name, downloaded):
     path = ROOT / name
     original = path.read_text(encoding='utf-8') if path.exists() else ''
     if 'ENERGY_MANAGER_' in original:
-        return False  # The existing file merger has already handled it.
+        return False
     if name == 'configuration.yaml':
-        # Avoid silently destroying unrelated YAML from a configured instance.
         vanilla_lines = {
             'default_config:', 'frontend:', 'themes: !include_dir_merge_named themes',
             'automation: !include automations.yaml', 'script: !include scripts.yaml',
@@ -296,8 +294,6 @@ def _merge_flows(old_content, new_content):
     ids = {n.get('id') for n in retained}
     retained.extend(n for n in incoming if n.get('id') not in ids)
 
-    # Include global configuration nodes referenced by Energy Manager.
-    # These include the HA server, entity configs and device configs.
     global_configs = {
         node['id']: node
         for node in new
@@ -364,7 +360,6 @@ def deploy():
         ) from exc
     if not isinstance(manifest.get('files'), dict):
         raise RuntimeError('Invalid manifest files map')
-    # Download and validate all file content before changing any installed files.
     downloads = {}
     for name, entry in manifest['files'].items():
         path = safe_repo_path(name)
@@ -467,8 +462,6 @@ def deploy():
     else:
         log('Node-RED flows already current')
 
-    # Register Lovelace resources through Home Assistant's supported API.
-    # Do not modify .storage/lovelace_resources directly while Core is running.
     resources = manifest.get('lovelace_resources') or []
 
     if not isinstance(resources, list):
@@ -665,14 +658,11 @@ def finalise():
     try:
         supervisor_request('POST', '/host/reboot', {}, timeout=10)
     except urllib.error.HTTPError as exc:
-        # An HTTP response means the Supervisor explicitly rejected the request.
         error = exc.read().decode('utf-8', errors='replace')
         marker_payload['status'] = 'reboot_request_failed'
         _write_atomic(marker, json.dumps(marker_payload, indent=2) + '\n')
         raise RuntimeError(f'Host reboot rejected (HTTP {exc.code}): {error}') from exc
     except (TimeoutError, OSError, urllib.error.URLError) as exc:
-        # The host may go down while the request is in flight. We cannot
-        # distinguish that from a network failure here; do not claim success.
         log(f'Reboot connection interrupted: {exc}')
         log('Reboot may be underway. Check whether Home Assistant restarts; if not, reboot it via Settings > System.')
         return
