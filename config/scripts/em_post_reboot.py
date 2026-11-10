@@ -39,8 +39,28 @@ def write_status(status, detail=''):
     tmp.write_text(json.dumps(payload, indent=2) + '\n', encoding='utf-8')
     os.replace(tmp, STATUS)
 
+def record_initial_install_version():
+    from update_checker import version_tuple
+
+    manifest_file = STATE / 'install-manifest.json'
+    manifest = json.loads(manifest_file.read_text(encoding='utf-8'))
+    version = manifest.get('version')
+    version_tuple(version)
+
+    version_file = STATE / 'version.txt'
+    previous = version_file.read_text(encoding='utf-8').strip() if version_file.exists() else None
+    if previous not in (None, '0.0.0', version):
+        raise RuntimeError(
+            f'Refusing to replace existing Energy Manager version {previous} '
+            f'with fresh-install version {version}'
+        )
+
+    temporary = STATE / 'version.txt.install-tmp'
+    temporary.write_text(version + '\n', encoding='utf-8')
+    os.replace(temporary, version_file)
+    print(f'[EM Post-Reboot] Installed Energy Manager version recorded: {version}', flush=True)
+
 def set_initial_default_dashboard():
-    """Set Energy Manager PV as the initial system default."""
     from marketplace_manager import HAWebSocket
 
     with HAWebSocket() as ws:
@@ -78,7 +98,6 @@ def set_initial_default_dashboard():
         )
 
 def notify_update_complete(token, reinstall=False):
-    """Notify Home Assistant after successful post-update checks."""
     import re
 
     result_file = STATE / 'update_result.txt'
@@ -305,6 +324,8 @@ def main():
 
                 print('[EM Post-Reboot] Setting initial default dashboard', flush=True)
                 set_initial_default_dashboard()
+
+                record_initial_install_version()
                 
                 write_status('complete', 'MQTT discovery OFF; Node-RED Companion configured')
                 print('[EM Post-Reboot] Completed successfully', flush=True)
