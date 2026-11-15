@@ -1,4 +1,4 @@
-# === ENERGY_MANAGER_UI_START v1.3.0 ===
+# === ENERGY_MANAGER_UI_START v2.0.1 ===
 
 lovelace:
   dashboards:
@@ -57,6 +57,7 @@ recorder:
       - input_text.ev_reason_code
       - input_text.ev_reason_text
       - sensor.battery_calculation_engine
+      - sensor.energy_manager_changelog
       - sensor.energy_manager_plan
       - sensor.energy_manager_motd
       - sensor.energy_manager_general
