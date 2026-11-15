@@ -1,6 +1,18 @@
 # Changelog
 
 <details open>
+<summary><strong>2.0.1- 2026-11-xx</strong></summary>
+
+### Added
+
+#### Changed
+
+#### Fixed
+* Added sensor.energy_manager_changelog to recorder exclusion
+
+</details>
+ 
+<details>
 <summary><strong>2.0.0 - 2026-11-14</strong></summary>
 
 ### Added
