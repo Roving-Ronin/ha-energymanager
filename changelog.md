@@ -7,6 +7,7 @@
 * Marketplace Config-template-card, used for Energy Consumption Card on dashboard
 * Energy Consumption Card as new card in dashboard, hidden by default
 * Battery Level Bar as new card in dashboard, hidden by default
+* BOM Rain Radar as new card in dashboard, hidden by default
 #### Changed
 * Removed Goodwe firmware update from being queried as it is not consistently supported over model type
 #### Fixed
