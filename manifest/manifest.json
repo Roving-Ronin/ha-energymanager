@@ -877,7 +877,7 @@
       "version": "latest"
     },
     {
-      "repository": "AshtonAU/bom-radar-card",
+      "repository": "Makin-Things/bom-radar-card",
       "type": "plugin",
       "action": "install",
       "version": "latest"
