@@ -1003,7 +1003,7 @@ views:
       value_compact: false
       value_sign: false
       bar_scale: linear
-      bar_color: #51B879
+      bar_color: green
       force_circular_background: false
       bar_orientation: ltr
       bar_effect: []
