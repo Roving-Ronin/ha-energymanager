@@ -10,6 +10,7 @@
 * BOM Rain Radar as new card in dashboard, hidden by default
 #### Changed
 * Removed Goodwe firmware update from being queried as it is not consistently supported over model type
+* Moved Update Available markdown card to be directly under Update Result entity card
 #### Fixed
 * Added sensor.energy_manager_changelog to recorder exclusion
 * AlphaESS script update
