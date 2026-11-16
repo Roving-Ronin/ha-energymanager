@@ -875,6 +875,12 @@
       "type": "plugin",
       "action": "install",
       "version": "latest"
+    },
+    {
+      "repository": "AshtonAU/bom-radar-card",
+      "type": "plugin",
+      "action": "install",
+      "version": "latest"
     } 
   ]
 }
