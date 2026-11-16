@@ -1003,7 +1003,7 @@ views:
       value_compact: false
       value_sign: false
       bar_scale: linear
-      bar_color: plum
+      bar_color: #51B879
       force_circular_background: false
       bar_orientation: ltr
       bar_effect: []
@@ -1018,7 +1018,7 @@ views:
       card_mod:
         style: |
           ha-state-icon {
-            color: plum;
+            color: #51B879;
           }
       view_layout:
         em_id: consumed-from-battery
@@ -1032,7 +1032,7 @@ views:
       value_compact: false
       value_sign: false
       bar_scale: linear
-      bar_color: lightcoral
+      bar_color: #529BE5
       force_circular_background: false
       bar_orientation: ltr
       bar_effect: []
@@ -1048,7 +1048,7 @@ views:
       card_mod:
         style: |
           ha-state-icon {
-            color: lightcoral;
+            color: #529BE5;
           }
       view_layout:
         em_id: consumed-from-grid
@@ -2786,6 +2786,234 @@ views:
         em_name: Battery Level Bar
         em_column: 2
         em_order: 17
+        em_hidden: true
+    - type: custom:config-template-card
+      entities:
+        - sensor.home_astronomical_sunrise_time_0
+        - sensor.home_astronomical_sunset_time_0
+      variables:
+        sunrise: >
+          new Date(
+            states['sensor.home_astronomical_sunrise_time_0'].state
+          ).getTime()
+        sunset: >
+          new Date(
+            states['sensor.home_astronomical_sunset_time_0'].state
+          ).getTime()
+      card:
+        type: custom:apexcharts-card
+        header:
+          show: true
+          title: House Energy Sources
+          show_states: false
+        graph_span: 24h
+        span:
+          start: day
+        now:
+          show: true
+          label: Now
+          color: "#FF5252"
+        stacked: true
+        update_interval: 5min
+        all_series_config:
+          type: column
+          unit: kWh
+          float_precision: 2
+          opacity: 0.95
+          statistics:
+            type: change
+            period: hour
+            align: middle
+          show:
+            legend_value: false
+        series:
+          - entity: sensor.daily_house_energy_from_pv
+            name: Solar PV
+            color: "#F5C542"
+          - entity: sensor.daily_house_energy_from_battery
+            name: Battery
+            color: "#51B879"
+          - entity: sensor.daily_house_energy_from_grid
+            name: Grid
+            color: "#529BE5"
+          - entity: sensor.daily_house_energy_from_pv
+            name: Solar PV (Yesterday)
+            color: "#B69838"
+            offset: -1d
+            show:
+              offset_in_name: false
+            transform: |
+              const hour = new Date(entity.start).getHours();
+              return hour >= new Date().getHours()
+                ? Number(x) : null;
+          - entity: sensor.daily_house_energy_from_battery
+            name: Battery (Yesterday)
+            color: "#347D55"
+            offset: -1d
+            show:
+              offset_in_name: false
+            transform: |
+              const hour = new Date(entity.start).getHours();
+              return hour >= new Date().getHours()
+                ? Number(x) : null;
+          - entity: sensor.daily_house_energy_from_grid
+            name: Grid (Yesterday)
+            color: "#366C9B"
+            offset: -1d
+            show:
+              offset_in_name: false
+            transform: |
+              const hour = new Date(entity.start).getHours();
+              return hour >= new Date().getHours()
+                ? Number(x) : null;
+        apex_config:
+          chart:
+            height: 320
+            toolbar:
+              show: false
+          plotOptions:
+            bar:
+              columnWidth: "75%"
+              borderRadius: 2
+          legend:
+            show: true
+            position: bottom
+            horizontalAlign: center
+          xaxis:
+            type: datetime
+            tickAmount: 12
+            labels:
+              format: HH:mm
+            tooltip:
+              enabled: false
+          yaxis:
+            min: 0
+            decimalsInFloat: 1
+            title:
+              text: kWh
+          tooltip:
+            enabled: true
+            shared: false
+            intersect: false
+            custom: |
+              EVAL:function({series, seriesIndex, dataPointIndex, w}) {
+                const target =
+                  w.globals.seriesX[seriesIndex][dataPointIndex];
+                if (!Number.isFinite(target)) return "";
+                const hour = new Date(target);
+                const dateLabel = hour.toLocaleString("en-AU", {
+                  day: "numeric",
+                  month: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: false
+                });
+                let rows = "";
+                let total = 0;
+                let count = 0;
+                for (let i = 0; i < series.length; i++) {
+                  const times = w.globals.seriesX[i] || [];
+                  const values = series[i] || [];
+                  let match = -1;
+                  let closest = Infinity;
+                  for (let j = 0; j < times.length; j++) {
+                    const difference = Math.abs(times[j] - target);
+                    if (difference < closest) {
+                      closest = difference;
+                      match = j;
+                    }
+                  }
+                  if (match < 0 || closest > 1800000) continue;
+
+                  const value = values[match];
+                  if (value == null || !Number.isFinite(value)) continue;
+                  const name = w.globals.seriesNames[i];
+                  const color = w.globals.colors[i];
+                  rows +=
+                    '<div style="display:flex;align-items:center;' +
+                    'justify-content:space-between;gap:20px;' +
+                    'margin:5px 0;">' +
+                    '<span><span style="color:' + color +
+                    ';margin-right:6px;">●</span>' +
+                    name + '</span>' +
+                    '<strong>' + value.toFixed(2) + ' kWh</strong>' +
+                    '</div>';
+                  total += value;
+                  count++;
+                }
+                if (!count) return "";
+                return (
+                  '<div style="padding:10px 12px;' +
+                  'background:#222;color:#eee;' +
+                  'border:1px solid #555;' +
+                  'border-radius:5px;min-width:210px;">' +
+                  '<div style="font-weight:bold;' +
+                  'margin-bottom:8px;">' +
+                  dateLabel + '</div>' +
+                  rows +
+                  '<div style="border-top:1px solid #555;' +
+                  'margin-top:8px;padding-top:7px;' +
+                  'display:flex;justify-content:space-between;">' +
+                  '<strong>Total</strong>' +
+                  '<strong>' + total.toFixed(2) + ' kWh</strong>' +
+                  '</div></div>'
+                );
+              }
+          dataLabels:
+            enabled: false
+          grid:
+            borderColor: "#80808030"
+          annotations:
+            xaxis:
+              # Night: midnight to sunrise
+              - x: "${new Date().setHours(0, 0, 0, 0)}"
+                x2: "${Math.round(sunrise / 3600000) * 3600000}"
+                fillColor: "#758196"
+                opacity: 0.30
+                borderColor: "transparent"
+                label:
+                  text: "☾ Night"
+                  orientation: horizontal
+                  position: top
+                  borderColor: "transparent"
+                  style:
+                    background: "#3D4552"
+                    color: "#D8DEE9"
+                    fontSize: "11px"
+              - x: "${Math.round(sunrise / 3600000) * 3600000}"
+                x2: "${Math.round(sunset / 3600000) * 3600000}"
+                fillColor: "#FFE082"
+                opacity: 0.07
+                borderColor: "transparent"
+                label:
+                  text: "☀ Day"
+                  orientation: horizontal
+                  position: top
+                  borderColor: "transparent"
+                  style:
+                    background: "#514B32"
+                    color: "#FFE082"
+                    fontSize: "11px"
+              - x: "${Math.round(sunset / 3600000) * 3600000}"
+                x2: "${new Date().setHours(24, 0, 0, 0)}"
+                fillColor: "#758196"
+                opacity: 0.30
+                borderColor: "transparent"
+                label:
+                  text: "☾ Night"
+                  orientation: horizontal
+                  position: top
+                  borderColor: "transparent"
+                  style:
+                    background: "#3D4552"
+                    color: "#D8DEE9"
+                    fontSize: "11px"
+      view_layout:
+        em_id: energy-consumption-card
+        em_width: 12
+        em_name: Energy Consumption Card
+        em_column: 2
+        em_order: 18
         em_hidden: true
   - type: sections
     max_columns: 3
