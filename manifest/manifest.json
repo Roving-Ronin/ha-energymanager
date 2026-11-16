@@ -869,6 +869,12 @@
       "type": "plugin",
       "action": "install",
       "version": "latest"
+    },
+    {
+      "repository": "iantrich/config-template-card",
+      "type": "plugin",
+      "action": "install",
+      "version": "latest"
     } 
   ]
 }
