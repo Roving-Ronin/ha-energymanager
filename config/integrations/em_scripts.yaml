@@ -2864,8 +2864,6 @@ script:
               {{ states('sensor.sigenergy_firmware_version') | string }}
             {% elif brand == 'alphaess' %}
               {{ states('sensor.alphaess_firmware_version') | string }}
-            {% elif brand in ['goodwe', 'goodwe_et', 'goodwe_int'] %}
-              {{ states('sensor.goodwe_firmware_version') | string }}
             {% elif brand == 'fronius' %}
               {{ states('sensor.fronius_firmware_version') | string }}
             {% elif brand == 'solaredge' %}
