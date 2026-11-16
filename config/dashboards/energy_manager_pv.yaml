@@ -3015,6 +3015,26 @@ views:
         em_column: 2
         em_order: 18
         em_hidden: true
+    - type: custom:bom-radar-card
+      layer: rain_rate
+      zoom_level: 8
+      map_height: 350
+      basemap_provider: bom
+      basemap_style: auto
+      frame_count: 9
+      frame_delay: 400
+      radar_opacity: 0.7
+      show_marker: true
+      show_layer_switcher: true
+      show_playback: true
+      show_legend: true
+      view_layout:
+        em_id: bom-rain-radar
+        em_width: 12
+        em_name: BOM Rain Radar
+        em_column: 2
+        em_order: 19
+        em_hidden: true      
   - type: sections
     max_columns: 3
     icon: mdi:list-box-outline
