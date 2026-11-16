@@ -9,6 +9,9 @@
 
 #### Fixed
 * Added sensor.energy_manager_changelog to recorder exclusion
+* AlphaESS script update
+  * PV not displaying if using secondary modbus PV address
+  * Load not displaying if using secondary modbus PV address
 
 </details>
  
