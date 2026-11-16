@@ -2771,9 +2771,21 @@ views:
       view_layout:
         em_id: battery-level
         em_width: 4
-        em_name: Battery Level
+        em_name: Battery Level Gauge
         em_column: 2
         em_order: 16
+        em_hidden: true
+    - type: custom:em-battery-bar-card
+      entity: sensor.inverter_battery_level
+      title: Battery Level
+      segments: 25
+      height: 40
+      view_layout:
+        em_id: battery-bar-card
+        em_width: 12
+        em_name: Battery Level Bar
+        em_column: 2
+        em_order: 17
         em_hidden: true
   - type: sections
     max_columns: 3
