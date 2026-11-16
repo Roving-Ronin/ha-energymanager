@@ -1,4 +1,4 @@
-# goodwe_modbus.yaml - v2.0.0
+# goodwe_modbus.yaml - v2.0.1
 - name: "goodwe_inverter"
   type: tcp
   host: !secret modbus_host_ip
@@ -20,11 +20,4 @@
       count: 8
       data_type: custom
       structure: ">16s"
-      scan_interval: 3600
-
-    - name: "goodwe_firmware_version"
-      device_address: !secret modbus_slave
-      address: 35016
-      input_type: input
-      data_type: uint16
       scan_interval: 3600
