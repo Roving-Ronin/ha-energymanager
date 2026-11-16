@@ -875,13 +875,7 @@
       "type": "plugin",
       "action": "install",
       "version": "latest"
-    },
-    {
-      "repository": "Makin-Things/bom-radar-card",
-      "type": "plugin",
-      "action": "install",
-      "version": "latest"
-    } 
+    }
   ]
 }
                                
