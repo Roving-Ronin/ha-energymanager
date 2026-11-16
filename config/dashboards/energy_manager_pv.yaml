@@ -3017,7 +3017,7 @@ views:
         em_hidden: true
     - type: custom:bom-radar-card
       layer: rain_rate
-      zoom_level: 8
+      zoom_level: 9
       map_height: 350
       basemap_provider: bom
       basemap_style: auto
