@@ -2778,8 +2778,8 @@ views:
     - type: custom:em-battery-bar-card
       entity: sensor.inverter_battery_level
       title: Battery Level
-      segments: 25
-      height: 40
+      segments: 33
+      height: 35
       view_layout:
         em_id: battery-bar-card
         em_width: 12
