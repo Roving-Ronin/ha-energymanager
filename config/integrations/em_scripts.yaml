@@ -2157,7 +2157,7 @@ script:
             {% elif brand == 'sigenergy' %}
               {{ (states('sensor.sigenergy_pv_power') | float(0) + additional) | round(0) }}
             {% elif brand == 'alphaess' %}
-              {% if states('sensor.alphaess_pv_power') not in ['unknown', 'unavailable'] %}
+              {% if states('sensor.alphaess_pv_power') not in ['unknown', 'unavailable', '0'] %}
                 {{ (states('sensor.alphaess_pv_power') | float(0) + additional) | round(0) }}
               {% elif states('sensor.alphaess_total_active_pv_power') not in ['unknown', 'unavailable'] %}
                 {{ (states('sensor.alphaess_total_active_pv_power') | float(0) + additional) | round(0) }}
@@ -2348,7 +2348,7 @@ script:
             {% elif brand == 'alphaess' %}
               {% set pv_base =
                   states('sensor.alphaess_pv_power')
-                    if states('sensor.alphaess_pv_power') not in ['unknown', 'unavailable']
+                    if states('sensor.alphaess_pv_power') not in ['unknown', 'unavailable', '0']
                     else states('sensor.alphaess_total_active_pv_power') %}
               {% set pv_power = (pv_base | float(0)) + additional %}
               {% set grid_power = states('sensor.alphaess_grid_power') | float(0) %}
