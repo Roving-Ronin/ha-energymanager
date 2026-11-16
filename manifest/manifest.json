@@ -237,12 +237,18 @@
       "backup_current": true,
       "new_in_version": "2.0.0"
     },
-    "www/em-battery-bar-card.js": {
+    "www/cards/em-battery-bar-card.js": {
       "action": "replace",
       "description": "Energy Level Bar Card",
       "backup_current": true,
       "new_in_version": "2.0.1"
     },  
+    "www/cards/bom-radar-card.js": {
+      "action": "replace",
+      "description": "BOM Radar Card",
+      "backup_current": true,
+      "new_in_version": "2.0.1"
+    },   
     "www/addon-iframe-card.js": {
       "action": "replace",
       "description": "Iframe Javascript",
@@ -647,7 +653,12 @@
     "new_in_version": "2.0.0"
     },
     {
-    "url": "/local/em-battery-bar-card.js",
+    "url": "/local/cards/em-battery-bar-card.js",
+    "action": "module",
+    "new_in_version": "2.0.1"
+    },
+    {
+    "url": "/local/cards/bom-radar-card.js",
     "action": "module",
     "new_in_version": "2.0.1"
     },
