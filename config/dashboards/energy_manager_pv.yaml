@@ -1,4 +1,4 @@
-# Energy Manager PV Dashboard — v2.0.0
+# Energy Manager PV Dashboard — v2.0.1
 views:
   - type: custom:energy-manager-layout
     icon: mdi:home-lightning-bolt
@@ -674,6 +674,56 @@ views:
         em_column: 1
         em_order: 3
     - type: custom:entity-progress-card
+      entity: sensor.solcast_pv_forecast_forecast_remaining_today
+      decimal: 1
+      value_compact: false
+      value_sign: false
+      bar_scale: linear
+      bar_color: orange
+      force_circular_background: false
+      bar_orientation: ltr
+      hide: []
+      alert_when:
+        highlight: background
+      frameless: false
+      marginless: false
+      icon: mdi:white-balance-sunny
+      icon_animation: spin
+      custom_theme: []
+      bar_effect: []
+      name: Generation Remaining
+      max_value:
+        jinja: >-
+          {% set size = states('input_number.solar_array_size') | float(0)
+          %}
+
+          {{ size * 7 }}
+      bar_size: small
+      card_mod:
+        style: |
+          ha-state-icon {
+            color: orange;
+          }
+      view_layout:
+        em_id: generation_remaining
+        em_width: 6
+        em_name: PV Generation Remaining
+        em_column: 1
+        em_order: 4
+        em_hidden: true
+    - type: entities
+      title: EMS Control
+      entities:
+      - input_select.inverter_ems_mode
+      - input_select.inverter_charge_discharge_mode
+      view_layout:
+        em_id: ems-control
+        em_width: 12
+        em_name: EMS Control
+        em_column: 1
+        em_order: 5
+        em_required: true
+    - type: custom:entity-progress-card
       entity: sensor.daily_consumed_energy
       decimal: 1
       value_compact: false
@@ -709,19 +759,7 @@ views:
         em_width: 6
         em_name: Total Consumed
         em_column: 1
-        em_order: 4
-    - type: entities
-      title: EMS Control
-      entities:
-      - input_select.inverter_ems_mode
-      - input_select.inverter_charge_discharge_mode
-      view_layout:
-        em_id: ems-control
-        em_width: 12
-        em_name: EMS Control
-        em_column: 1
-        em_order: 5
-        em_required: true
+        em_order: 6
     - type: custom:entity-progress-card
       entity: sensor.daily_imported_energy
       decimal: 1
@@ -754,7 +792,7 @@ views:
         em_width: 6
         em_name: Grid Import
         em_column: 1
-        em_order: 6
+        em_order: 7
     - type: custom:entity-progress-card
       entity: sensor.daily_exported_energy
       decimal: 1
@@ -787,7 +825,7 @@ views:
         em_width: 6
         em_name: Grid Export
         em_column: 1
-        em_order: 7
+        em_order: 8
     - type: custom:entity-progress-card
       entity: sensor.inverter_battery_charge
       name: Battery Charge
@@ -817,7 +855,7 @@ views:
         em_width: 6
         em_name: Battery Charge
         em_column: 1
-        em_order: 8
+        em_order: 9
     - type: custom:entity-progress-card
       entity: sensor.inverter_daily_battery_discharge
       decimal: 1
@@ -847,7 +885,7 @@ views:
         em_width: 6
         em_name: Battery Discharge
         em_column: 1
-        em_order: 9
+        em_order: 10
     - type: custom:entity-progress-card
       entity: sensor.daily_battery_charge
       decimal: 1
@@ -877,7 +915,7 @@ views:
         em_width: 6
         em_name: Total Charge
         em_column: 1
-        em_order: 10
+        em_order: 11
     - type: custom:entity-progress-card
       entity: sensor.daily_battery_discharge
       decimal: 1
@@ -907,7 +945,7 @@ views:
         em_width: 6
         em_name: Total Discharge
         em_column: 1
-        em_order: 11
+        em_order: 12
     - type: custom:entity-progress-card
       entity: sensor.daily_daytime_consumption
       decimal: 1
@@ -937,7 +975,7 @@ views:
         em_width: 6
         em_name: Daytime Consumption
         em_column: 1
-        em_order: 12
+        em_order: 13
     - type: custom:entity-progress-card
       entity: sensor.overnight_consumption
       decimal: 1
@@ -967,7 +1005,7 @@ views:
         em_width: 6
         em_name: Night Consumption
         em_column: 1
-        em_order: 13
+        em_order: 14
     - type: custom:entity-progress-card
       entity: sensor.daily_house_energy_from_pv
       decimal: 1
@@ -996,7 +1034,7 @@ views:
         em_width: 6
         em_name: Consumed from PV
         em_column: 1
-        em_order: 14
+        em_order: 15
     - type: custom:entity-progress-card
       entity: sensor.daily_house_energy_from_battery
       decimal: 1
@@ -1025,7 +1063,7 @@ views:
         em_width: 6
         em_name: Consumed from Battery
         em_column: 1
-        em_order: 15
+        em_order: 16
     - type: custom:entity-progress-card
       entity: sensor.daily_house_energy_from_grid
       decimal: 1
@@ -1055,7 +1093,7 @@ views:
         em_width: 6
         em_name: Consumed from Grid
         em_column: 1
-        em_order: 16
+        em_order: 17
     - type: custom:apexcharts-card
       graph_span: 12h
       update_interval: 5min
@@ -1236,7 +1274,7 @@ views:
         em_width: 12
         em_name: Inverter - Last 12 Hours
         em_column: 1
-        em_order: 17
+        em_order: 18
     - type: custom:apexcharts-card
       header:
         show: true
@@ -1269,7 +1307,7 @@ views:
         em_width: 12
         em_name: Current Power Profile
         em_column: 1
-        em_order: 18
+        em_order: 19
     - type: custom:energy-flow-card
       image: /local/energy-flow-house.png
       animation_speed: 1
@@ -2646,7 +2684,7 @@ views:
         em_width: 12
         em_name: Weather Today
         em_column: 1
-        em_order: 19
+        em_order: 20
         em_hidden: true
     - daily_forecast_days: 4
       daily_forecast_layout: vertical
@@ -2716,7 +2754,7 @@ views:
         em_width: 12
         em_name: Weather Four Day Forecast
         em_column: 1
-        em_order: 20
+        em_order: 21
         em_hidden: true
     - type: custom:modern-circular-gauge
       entity: sensor.inverter_battery_level
