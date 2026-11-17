@@ -372,8 +372,52 @@ def sync_marketplace_components(entries, dry_run=False, repair=False):
     with HAWebSocket() as ws:
         check_marketplace(ws)
         ensure_marketplace_github(ws)
+
         repos = ws.call('marketplace/repositories/list')
-        lookup = {str(repo.get('full_name', '')).lower(): repo for repo in repos}
+        lookup = {
+            str(repo.get('full_name', '')).lower(): repo
+            for repo in repos
+        }
+        
+        for item in entries:
+            name = item['repository']
+        
+            if name.lower() in lookup:
+                continue
+        
+            if item['action'] != 'install':
+                continue
+        
+            if item.get('custom_repository', False):
+                if dry_run:
+                    print(
+                        f'[EM Marketplace] Would register custom repository: {name}',
+                        flush=True
+                    )
+                    continue
+        
+                print(
+                    f'[EM Marketplace] Registering custom repository: {name}',
+                    flush=True
+                )
+        
+                ws.call(
+                    'marketplace/repositories/add',
+                    repository=f'https://github.com/{name}',
+                    category=item['type']
+                )
+        
+                repos = ws.call('marketplace/repositories/list')
+                lookup = {
+                    str(repo.get('full_name', '')).lower(): repo
+                    for repo in repos
+                }
+        
+                if name.lower() not in lookup:
+                    raise RuntimeError(
+                        f'Custom Marketplace repository registration failed: {name}'
+                    )
+        
         for item in entries:
             name = item['repository']
             category = item['type']
