@@ -886,6 +886,13 @@
       "type": "plugin",
       "action": "install",
       "version": "latest"
+    },
+    {
+      "repository": "Roving-Ronin/BatteryLedger",
+      "type": "integration",
+      "action": "install",
+      "version": "latest",
+      "custom_repository": true
     }
   ]
 }
