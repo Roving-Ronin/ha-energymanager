@@ -12,7 +12,7 @@ energy-manager-layout .em-tabs button:focus-visible{outline:2px solid var(--prim
 energy-manager-layout .em-toolbar{display:flex;gap:7px;align-items:flex-start;flex-wrap:nowrap;margin:7px 0 12px;min-width:0}
 energy-manager-layout .em-toolbar-actions{display:flex;flex:0 0 auto;min-width:0;gap:7px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
 energy-manager-layout .em-toolbar-actions>button{flex:0 0 auto;white-space:nowrap}
-+energy-manager-layout .em-editing .em-toolbar-actions{flex:0 1 880px}
+energy-manager-layout .em-editing .em-toolbar-actions{flex:0 1 850px}
 energy-manager-layout .em-profile-select{max-width:180px;min-width:100px;border-radius:6px;padding:5px 6px;background:var(--card-background-color,var(--ha-card-background,#242424));color:var(--primary-text-color);border:1px solid var(--divider-color,#666)}
 energy-manager-layout .em-status{font-size:12px;opacity:.75;margin-right:auto}
 energy-manager-layout button{font:inherit;background:var(--card-background-color,var(--ha-card-background,#242424));color:var(--primary-text-color);border:1px solid var(--divider-color,#666);border-radius:6px;padding:5px 9px;cursor:pointer}
