@@ -76,7 +76,18 @@ energy-manager-layout .em-hint{font-size:12px;opacity:.75;margin-top:9px}
     _eligibilitySignature(){return this._configs.map((_,i)=>this._eligible(i)?'1':'0').join('');}
     _defaultWidth(i){const v=Number(this._configs[i]?.view_layout?.em_width);return Number.isInteger(v)?Math.max(1,Math.min(12,v)):12;}
     _state(i){const m=this._meta(i),s=this._layout[m.id]||{};const col=Number.isInteger(s.col)?s.col:m.defaultColumn;const order=Number.isInteger(s.order)?s.order:m.defaultOrder;return{col:Math.max(0,Math.min(2,col)),order, width:(Number.isInteger(s.width)&&s.width>=1&&s.width<=12?s.width:this._defaultWidth(i)),hidden:!m.required&&(typeof s.hidden==='boolean'?s.hidden:(m.defaultTab==='inverter'&&this._activeProfile==='inverter'?false:this._configs[i]?.view_layout?.em_hidden===true)),hidden_devices:!m.required&&Array.isArray(s.hidden_devices)?s.hidden_devices.filter(v=>['desktop','tablet','mobile'].includes(v)):[],locked:typeof s.locked==='boolean'?s.locked:this._configs[i]?.view_layout?.em_locked===true,lock_device:['desktop','tablet','mobile'].includes(s.lock_device)?s.lock_device:null};}
-    _eligibleItems(){const selected=this._profiles.find(t=>t.id===this._activeProfile)?.selected;return this._configs.map((_,i)=>i).filter(i=>!this._meta(i).fixed&&this._eligible(i)&&(selected===null||selected===undefined||selected.includes(this._meta(i).id)));}
+    _selectedIds(tab){
+      if(Array.isArray(tab?.selected))return new Set(tab.selected);
+      const ids=new Set();
+      for(let i=0;i<this._configs.length;i++){
+        const meta=this._meta(i),source=this._configs[i]?.view_layout?.em_default_tab||'overview';
+        if(tab?.id==='primary'&&source!=='inverter')ids.add(meta.id);
+        else if(tab?.id==='inverter'&&(source==='inverter'||Object.prototype.hasOwnProperty.call(tab.cards||{},meta.id)))ids.add(meta.id);
+        else if(tab?.id!=='primary'&&tab?.id!=='inverter')ids.add(meta.id);
+      }
+      return ids;
+    }
+    _eligibleItems(){const tab=this._profiles.find(t=>t.id===this._activeProfile),selected=this._selectedIds(tab);return this._configs.map((_,i)=>i).filter(i=>!this._meta(i).fixed&&this._eligible(i)&&selected.has(this._meta(i).id));}
     _ordered(col,includeHidden=false){return this._eligibleItems().filter(i=>{const s=this._state(i);return s.col===col&&(includeHidden||!this._deviceHidden(s));}).sort((a,b)=>this._state(a).order-this._state(b).order||a-b);}
     _history(){
       if(!this._histories.has(this._activeProfile))this._histories.set(this._activeProfile,{undo:[],redo:[]});
@@ -161,8 +172,7 @@ energy-manager-layout .em-hint{font-size:12px;opacity:.75;margin-top:9px}
         const panel=el('div','em-picker');panel.append(el('strong','','Cards on this tab'));
         panel.append(el('p','em-hint','Select which Energy Manager cards belong to this tab.'));
         const options=el('div','em-options'),tab=this._profiles.find(t=>t.id===this._activeProfile);
-        const selected=tab?.selected===null||tab?.selected===undefined?
-          new Set(this._configs.map((_,i)=>this._meta(i).id)):new Set(tab.selected);
+        const selected=this._selectedIds(tab);
         for(let i=0;i<this._configs.length;i++){
           const meta=this._meta(i),opt=el('label','em-option'),check=el('input');
           check.type='checkbox';check.checked=selected.has(meta.id);check.disabled=meta.required||meta.fixed;
