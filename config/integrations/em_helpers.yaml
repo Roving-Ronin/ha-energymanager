@@ -388,6 +388,10 @@ input_select:
     icon: mdi:format-list-bulleted  
 
 input_boolean:
+  battery_2:
+    name: Enable Battery 2
+    icon: mdi:battery-plus-outline
+  
   demand_period_enabled:
     name: Demand Period Enabled
     icon: mdi:clock-time-five-outline
