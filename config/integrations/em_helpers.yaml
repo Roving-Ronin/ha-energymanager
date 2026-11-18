@@ -780,6 +780,24 @@ input_number:
     mode: box
     unit_of_measurement: mm
 
+  battery_install_cost:
+    name: battery_install_cost
+    icon: mdi:battery-plus-variant
+    min: 0
+    max: 80000
+    step: 1
+    mode: box
+    unit_of_measurement: "$"
+
+  battery_install_cost_2:
+    name: battery_install_cost_2
+    icon: mdi:battery-plus-variant
+    min: 0
+    max: 80000
+    step: 1
+    mode: box
+    unit_of_measurement: "$"
+
   inverter_max_soc:
     name: "Maximum SOC"
     min: 0
@@ -2416,6 +2434,12 @@ input_text:
 input_datetime:
   battery_install_date:
     name: Battery Install Date
+    icon: mdi:home-battery
+    has_date: true
+    has_time: false
+
+  battery_install_date_2:
+    name: Battery Install Date 2
     icon: mdi:home-battery
     has_date: true
     has_time: false
