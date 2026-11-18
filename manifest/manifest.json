@@ -201,6 +201,12 @@
       "backup_current": true,
       "new_in_version": "2.0.0"
     },
+    "dashboards/energy_manager_cards.yaml": {
+      "action": "replace",
+      "description": "Shared Overview and Inverter card catalogue",
+      "backup_current": true,
+      "new_in_version": "2.0.1"
+    },
     "dashboards/energy_manager_ev.yaml": {
       "action": "replace",
       "description": "EV dashboard",
