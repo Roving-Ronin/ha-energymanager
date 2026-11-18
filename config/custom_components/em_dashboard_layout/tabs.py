@@ -109,13 +109,17 @@ async def user_state(hass, user_id: str) -> dict:
         state["tabs"] = validate_tabs(state["tabs"], migration=True)
         return state
 
-    tabs = default_tabs()
+    tabs = default_tabs(root)
     owner_path = root / "dashboard_tabs" / "migration_owner.json"
     legacy_path = root / "dashboard_layout.json"
     user = await hass.auth.async_get_user(user_id)
     if user and user.is_admin and not owner_path.exists() and legacy_path.exists():
         legacy = await asyncio.to_thread(read_json, legacy_path)
-        tabs = validate_tabs(migrate_profiles(legacy), migration=True)
+        tabs = migrate_profiles(legacy)
+        if not (legacy.get("profiles", {}).get("bundled-v1") or
+                legacy.get("profiles", {}).get("v1")):
+            tabs[1]["cards"] = default_tabs(root)[1]["cards"]
+        tabs = validate_tabs(tabs, migration=True)
         state = {"version": 1, "revision": 0, "tabs": tabs}
         await asyncio.to_thread(atomic_write, target, state)
         await asyncio.to_thread(atomic_write, owner_path, {"user_id": user_id})
