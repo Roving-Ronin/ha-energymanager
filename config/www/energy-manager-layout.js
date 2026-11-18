@@ -186,7 +186,7 @@ energy-manager-layout .em-hint{font-size:12px;opacity:.75;margin-top:9px}
         importBtn.disabled=this._busy||this._profileBusy;toolbar.append(importBtn);
       }
       const customise=button(this._editing?'✓ Finish customising':'✥ Customise',()=>{this._editing=!this._editing;this._render();});toolbar.append(customise);
-      toolbar.append(button('☷ Cards / visibility',()=>{this._picker=!this._picker;this._render();}));
+      toolbar.append(button('☷ Show / hide',()=>{this._picker=!this._picker;this._render();}));
       if(this._editing){
         const history=this._history();
         const undo=button('↶ Undo',()=>this._travel('undo'));undo.disabled=!history.undo.length||this._profileBusy;toolbar.append(undo);
@@ -195,8 +195,8 @@ energy-manager-layout .em-hint{font-size:12px;opacity:.75;margin-top:9px}
         toolbar.append(button('⟳ Reload saved',()=>{if(this._busy||this._profileBusy)return;this._dirty=false;this._histories.delete(this._activeProfile);this._fetch();}));
       }
       if(this._picker){
-        const panel=el('div','em-picker');panel.append(el('strong','','Cards and visibility'));
-        panel.append(el('p','em-hint','Add or remove cards from this tab. For included cards, choose whether they are visible on the selected device. Inactive warnings can still be placed while customising.'));
+        const panel=el('div','em-picker');panel.append(el('strong','','Show / hide'));
+        panel.append(el('p','em-hint','Tick a card to show it on this tab for the selected device. Untick to hide it. Inactive warnings remain available for positioning while customising.'));
         const controls=el('div','em-picker-toolbar'),tabs=el('div','em-device-tabs');
         const currentDevice=this._pickerDevice;
         for(const device of ['desktop','tablet','mobile']){
@@ -212,28 +212,30 @@ energy-manager-layout .em-hint{font-size:12px;opacity:.75;margin-top:9px}
         const selected=this._selectedIds(activeTab);
         for(let i=0;i<this._configs.length;i++){
           if(!this._catalogueEligible(i))continue;
-          const m=this._meta(i),state=this._state(i),opt=el('div','em-option'),member=el('input'),input=el('input');
+          const m=this._meta(i),state=this._state(i),opt=el('label','em-option'),input=el('input');
           const included=selected.has(m.id);
-          member.type='checkbox';member.checked=included;member.disabled=m.required;
-          member.title='Include on this tab';member.setAttribute('aria-label','Include '+m.name+' on this tab');
-          member.addEventListener('change',()=>{
-            if(member.checked){selected.add(m.id);const st=this._state(i);this._layout[m.id]={...st,hidden:false,hidden_devices:[]};}
-            else selected.delete(m.id);
-            activeTab.selected=[...selected];this._render();this._save();
-          });
-          const visible=m.required||(state.locked&&state.lock_device===currentDevice)||(!state.hidden&&!state.hidden_devices.includes(currentDevice));
-          input.type='checkbox';input.checked=included&&visible;input.disabled=!included||m.required||(state.locked&&state.lock_device===currentDevice);
-          input.title='Visible on '+currentDevice;input.setAttribute('aria-label','Show '+m.name+' on '+currentDevice);
+          const visible=included&&(m.required||(state.locked&&state.lock_device===currentDevice)||(!state.hidden&&!state.hidden_devices.includes(currentDevice)));
+          input.type='checkbox';input.checked=visible;
+          input.disabled=m.required||(included&&state.locked&&state.lock_device===currentDevice);
+          input.title='Show on '+currentDevice;input.setAttribute('aria-label','Show '+m.name+' on '+currentDevice);
           input.addEventListener('change',()=>{
-            if(!included||m.required||(this._state(i).locked&&this._state(i).lock_device===currentDevice))return;
-            const latest=this._state(i);
+            if(m.required||(included&&this._state(i).locked&&this._state(i).lock_device===currentDevice))return;
             const all=['desktop','tablet','mobile'];
+            if(!selected.has(m.id)){
+              if(!input.checked)return;
+              selected.add(m.id);
+              activeTab.selected=[...selected];
+              this._layout[m.id]={...this._state(i),hidden:false,hidden_devices:all.filter(d=>d!==currentDevice)};
+              this._render();this._save();
+              return;
+            }
+            const latest=this._state(i);
             let hiddenDevices=latest.hidden?all.filter(d=>d!==currentDevice):[...latest.hidden_devices];
             if(input.checked)hiddenDevices=hiddenDevices.filter(d=>d!==currentDevice);
             else if(!hiddenDevices.includes(currentDevice))hiddenDevices.push(currentDevice);
             this._update(i,{hidden:false,hidden_devices:hiddenDevices},currentDevice);
           });
-          opt.append(member,el('span','em-option-name',m.name+(m.required?' (required on primary)':'')),input);
+          opt.append(input,el('span','em-option-name',m.name+(m.required?' (required on primary)':'')));
           options.append(opt);entries.push({opt,name:m.name.toLocaleLowerCase()});
         }
         const filter=()=>{const q=this._pickerSearch.trim().toLocaleLowerCase();for(const entry of entries)entry.opt.hidden=!!q&&!entry.name.includes(q);};
