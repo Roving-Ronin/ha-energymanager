@@ -3978,7 +3978,7 @@ views:
                       - entity: input_boolean.battery_2_enabled
                         state: "on"
                     row:
-                      entity: input_datetime.battery_install_cost_2
+                      entity: input_number.battery_install_cost_2
                   - entity: input_number.inverter_import_limit
                     name: Inverter Size (kW)
                   - entity: input_number.battery_charge_power_hardlimit
