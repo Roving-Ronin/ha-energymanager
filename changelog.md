@@ -8,6 +8,7 @@
 * Energy Consumption Card as new card in dashboard, hidden by default
 * Battery Level Bar as new card in dashboard, hidden by default
 * BOM Rain Radar as new card in dashboard, hidden by default
+* BatteryLedger added from Roving-Ronin/BatteryLedger
 #### Changed
 * Removed Goodwe firmware update from being queried as it is not consistently supported over model type
 * Moved Update Available markdown card to be directly under Update Result entity card
