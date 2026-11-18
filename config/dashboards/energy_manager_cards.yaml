@@ -392,7 +392,7 @@
     rows: 3
   conditions:
   - entity: input_select.electricity_provider
-    state_not: ["Flow Power", "Globird", "Other"]
+    state: ["Amber Electric", "LocalVolts"]
   card:
     show_name: true
     show_icon: true
@@ -413,7 +413,7 @@
     rows: 3
   conditions:
   - entity: input_select.electricity_provider
-    state_not: ["Flow Power", "Globird", "Other"]
+    state: ["Amber Electric", "LocalVolts"]
   card:
     show_name: true
     show_icon: true
@@ -1808,6 +1808,9 @@
     em_name: EV Charging Forecast
     em_column: 2
     em_order: 8
+    em_picker_conditions:
+      - entity: binary_sensor.ocpp_active
+        state: "on"
 - type: entities
   title: System Status
   entities:
@@ -3068,6 +3071,7 @@
 - type: entities
   view_layout:
     em_id: inverter-system-information
+    em_duplicate_of: system-information
     em_name: System Information
     em_default_tab: inverter
     em_hidden: true
@@ -3133,6 +3137,7 @@
 - type: entities
   view_layout:
     em_id: inverter-system-status
+    em_duplicate_of: system-status
     em_name: System Status
     em_default_tab: inverter
     em_hidden: true
@@ -3415,6 +3420,7 @@
 - type: entities
   view_layout:
     em_id: inverter-battery-soc-settings
+    em_duplicate_of: battery-soc-settings
     em_name: Battery SOC Settings
     em_default_tab: inverter
     em_hidden: true
@@ -3445,6 +3451,7 @@
 - type: entities
   view_layout:
     em_id: inverter-power-settings
+    em_duplicate_of: power-settings
     em_name: Power Settings
     em_default_tab: inverter
     em_hidden: true
@@ -3505,6 +3512,7 @@
 - type: markdown
   view_layout:
     em_id: inverter-automation-warning
+    em_companion_of: power-settings
     em_name: Automation Warning
     em_default_tab: inverter
     em_hidden: true
@@ -3529,6 +3537,7 @@
 - type: entities
   view_layout:
     em_id: inverter-scheduled-charge
+    em_duplicate_of: scheduled-charge
     em_name: Scheduled Charge
     em_default_tab: inverter
     em_hidden: true
@@ -3580,6 +3589,7 @@
 - type: entities
   view_layout:
     em_id: inverter-power-status
+    em_duplicate_of: power-status
     em_name: Power Status
     em_default_tab: inverter
     em_hidden: true
@@ -3623,6 +3633,7 @@
 - type: entities
   view_layout:
     em_id: inverter-energy-today
+    em_duplicate_of: energy-today
     em_name: Energy Today
     em_default_tab: inverter
     em_hidden: true
@@ -3727,6 +3738,7 @@
 - type: entities
   view_layout:
     em_id: inverter-control-settings
+    em_duplicate_of: inverter-settings
     em_name: Inverter Settings
     em_default_tab: inverter
     em_hidden: true
