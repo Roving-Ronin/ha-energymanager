@@ -3965,6 +3965,8 @@ views:
                 entities:
                   - entity: input_datetime.battery_install_date
                   - entity: input_number.battery_install_cost
+                  - entity: input_boolean.battery_2_enabled
+                    name: Enable Battery 2 for Costings
                   - type: conditional
                     conditions:
                       - entity: input_boolean.battery_2_enabled
