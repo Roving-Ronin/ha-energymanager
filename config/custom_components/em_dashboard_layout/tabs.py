@@ -25,7 +25,7 @@ def default_tabs(root: Path | None = None) -> list[dict]:
             inverter_cards = payload["cards"]
     return [
         {"id": "primary", "name": "Overview", "cards": {}},
-        {{"id": "inverter", "name": "Inverter", "cards": inverter_cards, "selected": None},
+        {"id": "inverter", "name": "Inverter", "cards": inverter_cards, "selected": None},
     ]
 
 
