@@ -5,13 +5,14 @@
   const CSS = `
 energy-manager-layout{display:block;min-width:0}energy-manager-layout *{box-sizing:border-box}
 energy-manager-layout{display:block;min-width:0}energy-manager-layout *{box-sizing:border-box}
-energy-manager-layout .em-tabs{display:flex;flex:1 1 240px;min-width:0;align-items:center;gap:5px;overflow-x:auto;white-space:nowrap;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
+energy-manager-layout .em-tabs{display:flex;flex:1 1 600px;min-width:0;align-items:center;gap:5px;overflow-x:auto;white-space:nowrap;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
 energy-manager-layout .em-tabs button{flex-shrink:0}
 energy-manager-layout .em-tabs button[aria-selected="true"]{background:var(--primary-color,#03a9f4);color:var(--text-primary-color,#fff);font-weight:600}
 energy-manager-layout .em-tabs button:focus-visible{outline:2px solid var(--primary-color,#03a9f4);outline-offset:2px}
-energy-manager-layout .em-toolbar{display:flex;gap:7px;align-items:center;justify-content:flex-end;flex-wrap:nowrap;margin:7px 0 12px;min-width:0}
-energy-manager-layout .em-toolbar>button{flex:0 0 auto;white-space:nowrap}
-energy-manager-layout .em-editing .em-toolbar{flex-wrap:wrap}
+energy-manager-layout .em-toolbar{display:flex;gap:7px;align-items:flex-start;flex-wrap:nowrap;margin:7px 0 12px;min-width:0}
+energy-manager-layout .em-toolbar-actions{display:flex;flex:0 0 auto;min-width:0;gap:7px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+energy-manager-layout .em-toolbar-actions>button{flex:0 0 auto;white-space:nowrap}
++energy-manager-layout .em-editing .em-toolbar-actions{flex:0 1 880px}
 energy-manager-layout .em-profile-select{max-width:180px;min-width:100px;border-radius:6px;padding:5px 6px;background:var(--card-background-color,var(--ha-card-background,#242424));color:var(--primary-text-color);border:1px solid var(--divider-color,#666)}
 energy-manager-layout .em-status{font-size:12px;opacity:.75;margin-right:auto}
 energy-manager-layout button{font:inherit;background:var(--card-background-color,var(--ha-card-background,#242424));color:var(--primary-text-color);border:1px solid var(--divider-color,#666);border-radius:6px;padding:5px 9px;cursor:pointer}
@@ -56,7 +57,7 @@ energy-manager-layout .em-editing .em-drop-end{border-color:var(--divider-color,
 energy-manager-layout .em-drop-end.em-target{border:2px dashed var(--primary-color,#03a9f4)}
 energy-manager-layout .em-hint{font-size:12px;opacity:.75;margin-top:9px}
 @media(max-width:900px){energy-manager-layout .em-columns{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:590px){energy-manager-layout .em-columns{grid-template-columns:minmax(0,1fr)}energy-manager-layout .em-toolbar{justify-content:flex-end}}
+@media(max-width:900px){energy-manager-layout .em-toolbar{flex-wrap:wrap}energy-manager-layout .em-tabs{flex:1 1 100%}energy-manager-layout .em-toolbar-actions{flex:1 1 100%}}
 `;
   const el=(tag,cls='',value)=>{const node=document.createElement(tag);if(cls)node.className=cls;if(value!==undefined)node.textContent=value;return node;};
   const button=(label,fn)=>{const node=el('button','',label);node.type='button';node.addEventListener('click',fn);return node;};
@@ -169,30 +170,31 @@ energy-manager-layout .em-hint{font-size:12px;opacity:.75;margin-top:9px}
         item.disabled=this._busy||this._profileBusy;tabs.append(item);
       }
       toolbar.append(tabs);
+      const actions=el('div','em-toolbar-actions');toolbar.append(actions);
       if(this._editing){
         const add=button('＋ New tab',()=>{const name=prompt('Name for the new tab:');if(name?.trim())this._profileAction('create',{name:name.trim()});});
-        add.disabled=this._profiles.length>=8;toolbar.append(add);
-        toolbar.append(button('✎ Rename tab',()=>{const current=this._profiles.find(p=>p.id===this._activeProfile);const name=prompt('Rename tab:',current?.name||'');if(name?.trim())this._profileAction('rename',{name:name.trim()});}));
+        add.disabled=this._profiles.length>=8;actions.append(add);
+        actions.append(button('✎ Rename tab',()=>{const current=this._profiles.find(p=>p.id===this._activeProfile);const name=prompt('Rename tab:',current?.name||'');if(name?.trim())this._profileAction('rename',{name:name.trim()});}));
         const remove=button('✕ Delete tab',()=>{if(confirm('Delete this tab?'))this._profileAction('delete',{});});
-        remove.disabled=this._activeProfile==='primary';toolbar.append(remove);
-        toolbar.append(button('← Move tab',()=>this._profileAction('move',{offset:-1})));
-        toolbar.append(button('Move tab →',()=>this._profileAction('move',{offset:1})));
+        remove.disabled=this._activeProfile==='primary';actions.append(remove);
+        actions.append(button('← Move tab',()=>this._profileAction('move',{offset:-1})));
+        actions.append(button('Move tab →',()=>this._profileAction('move',{offset:1})));
         const exportBtn=button('↓ Export layout',()=>this._exportLayout());
-        exportBtn.disabled=this._busy||this._profileBusy;toolbar.append(exportBtn);
+        exportBtn.disabled=this._busy||this._profileBusy;actions.append(exportBtn);
         const fileInput=el('input');fileInput.type='file';fileInput.accept='.json,application/json';fileInput.style.display='none';
         fileInput.addEventListener('change',async()=>{const file=fileInput.files?.[0];fileInput.value='';if(file)await this._importLayout(file);});
-        toolbar.append(fileInput);
+        actions.append(fileInput);
         const importBtn=button('↑ Import layout',()=>fileInput.click());
-        importBtn.disabled=this._busy||this._profileBusy;toolbar.append(importBtn);
+        importBtn.disabled=this._busy||this._profileBusy;actions.append(importBtn);
       }
-      const customise=button(this._editing?'✓ Finish customising':'✥ Customise',()=>{this._editing=!this._editing;this._render();});toolbar.append(customise);
-      toolbar.append(button('☷ Show / hide',()=>{this._picker=!this._picker;this._render();}));
+      const customise=button(this._editing?'✓ Finish customising':'✥ Customise',()=>{this._editing=!this._editing;this._render();});actions.append(customise);
+      actions.append(button('☷ Show / hide',()=>{this._picker=!this._picker;this._render();}))ton('☷ Show / hide',()=>{this._picker=!this._picker;this._render();}));
       if(this._editing){
         const history=this._history();
-        const undo=button('↶ Undo',()=>this._travel('undo'));undo.disabled=!history.undo.length||this._profileBusy;toolbar.append(undo);
-        const redo=button('↷ Redo',()=>this._travel('redo'));redo.disabled=!history.redo.length||this._profileBusy;toolbar.append(redo);
-        toolbar.append(button('↺ Reset defaults',()=>{if(this._profileBusy)return;if(confirm('Restore the default arrangement and visibility of all optional cards?')){const before=this._snapshot();this._layout={};if(this._record(before)){this._render();this._save();}}}));
-        toolbar.append(button('⟳ Reload saved',()=>{if(this._busy||this._profileBusy)return;this._dirty=false;this._histories.delete(this._activeProfile);this._fetch();}));
+        const undo=button('↶ Undo',()=>this._travel('undo'));undo.disabled=!history.undo.length||this._profileBusy;actions.append(undo);
+        const redo=button('↷ Redo',()=>this._travel('redo'));redo.disabled=!history.redo.length||this._profileBusy;actions.append(redo);
+        actions.append(button('↺ Reset defaults',()=>{if(this._profileBusy)return;if(confirm('Restore the default arrangement and visibility of all optional cards?')){const before=this._snapshot();this._layout={};if(this._record(before)){this._render();this._save();}}}));
+        actions.append(button('⟳ Reload saved',()=>{if(this._busy||this._profileBusy)return;this._dirty=false;this._histories.delete(this._activeProfile);this._fetch();}));
       }
       if(this._picker){
         const panel=el('div','em-picker');panel.append(el('strong','','Show / hide'));
