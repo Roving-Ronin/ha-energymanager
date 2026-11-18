@@ -786,7 +786,7 @@ input_number:
 
   battery_install_cost:
     name: Battery Install Cost
-    icon: mdi:battery-plus-variant
+    icon: mdi:currency-usd
     min: 0
     max: 80000
     step: 1
@@ -795,7 +795,7 @@ input_number:
 
   battery_install_cost_2:
     name: Battery Instal Cost (2)
-    icon: mdi:battery-plus-variant
+    icon: mdi:currency-usd
     min: 0
     max: 80000
     step: 1
