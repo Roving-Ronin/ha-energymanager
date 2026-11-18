@@ -785,7 +785,7 @@ input_number:
     unit_of_measurement: mm
 
   battery_install_cost:
-    name: battery_install_cost
+    name: Battery Install Cost
     icon: mdi:battery-plus-variant
     min: 0
     max: 80000
@@ -794,7 +794,7 @@ input_number:
     unit_of_measurement: "$"
 
   battery_install_cost_2:
-    name: battery_install_cost_2
+    name: Battery Instal Cost (2)
     icon: mdi:battery-plus-variant
     min: 0
     max: 80000
