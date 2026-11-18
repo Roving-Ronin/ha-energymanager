@@ -14,6 +14,8 @@ from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
 
+from .tabs import register_tabs
+
 DOMAIN = "em_dashboard_layout"
 CONFIG_SCHEMA = vol.Schema({vol.Optional(DOMAIN): vol.Schema({})}, extra=vol.ALLOW_EXTRA)
 MAX_BYTES = 300_000
@@ -404,4 +406,5 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     websocket_api.async_register_command(hass, ws_save)
     websocket_api.async_register_command(hass, ws_profile)
     websocket_api.async_register_command(hass, ws_sync)
+    register_tabs(hass)
     return True
