@@ -188,7 +188,7 @@ energy-manager-layout .em-hint{font-size:12px;opacity:.75;margin-top:9px}
         importBtn.disabled=this._busy||this._profileBusy;actions.append(importBtn);
       }
       const customise=button(this._editing?'✓ Finish customising':'✥ Customise',()=>{this._editing=!this._editing;this._render();});actions.append(customise);
-      actions.append(button('☷ Show / hide',()=>{this._picker=!this._picker;this._render();}))ton('☷ Show / hide',()=>{this._picker=!this._picker;this._render();}));
+      actions.append(button('☷ Show / hide',()=>{this._picker=!this._picker;this._render();}));
       if(this._editing){
         const history=this._history();
         const undo=button('↶ Undo',()=>this._travel('undo'));undo.disabled=!history.undo.length||this._profileBusy;actions.append(undo);
