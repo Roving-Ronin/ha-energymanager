@@ -72,7 +72,7 @@ energy-manager-layout .em-hint{font-size:12px;opacity:.75;margin-top:9px}
     connectedCallback(){window.addEventListener('resize',this._onViewportChange);this._device=this._deviceClass();this._render();}
     disconnectedCallback(){window.removeEventListener('resize',this._onViewportChange);}
     _deviceClass(){const w=window.innerWidth;return w<=590?'mobile':w<=900?'tablet':'desktop';}
-    _deviceHidden(state){return state.locked&&state.lock_device===this._device?false:state.hidden||state.hidden_devices.includes(this._device);}
+    _deviceHidden(state){const device=this._picker?this._pickerDevice:this._device;return state.locked&&state.lock_device===device?false:state.hidden||state.hidden_devices.includes(device);}
     _meta(i){const o=this._configs[i]?.view_layout||{};return{id:String(o.em_id||`card-${i}`),name:String(o.em_name||`Card ${i+1}`),fixed:!!o.em_fixed,required:!!o.em_required&&this._activeProfile==='primary',defaultTab:String(o.em_default_tab||'overview'),defaultColumn:Math.max(0,Math.min(2,Number(o.em_column??i%3))),defaultOrder:Number(o.em_order??i)};}
     _conditionsMatch(conditions){if(!Array.isArray(conditions)||!this._hass?.states)return false;return conditions.every(rule=>{const state=this._hass.states[rule.entity]?.state;if(state===undefined)return false;const values=v=>(Array.isArray(v)?v:[v]).map(String);return(rule.state===undefined||values(rule.state).includes(state))&&(rule.state_not===undefined||!values(rule.state_not).includes(state));});}
     _eligible(i){const card=this._configs[i];return card?.type!=='conditional'||!Array.isArray(card.conditions)||this._conditionsMatch(card.conditions);}
@@ -196,7 +196,7 @@ energy-manager-layout .em-hint{font-size:12px;opacity:.75;margin-top:9px}
       }
       if(this._picker){
         const panel=el('div','em-picker');panel.append(el('strong','','Show / hide'));
-        panel.append(el('p','em-hint','Tick a card to show it on this tab for the selected device. Untick to hide it. Inactive warnings remain available for positioning while customising.'));
+        panel.append(el('p','em-hint','Tick a card to show it on this tab for the selected device. The dashboard below previews that device’s selected cards; its column layout still follows your screen size. Closing Show / hide restores your actual device view.'));
         const controls=el('div','em-picker-toolbar'),tabs=el('div','em-device-tabs');
         const currentDevice=this._pickerDevice;
         for(const device of ['desktop','tablet','mobile']){
