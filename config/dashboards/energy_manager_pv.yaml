@@ -3967,13 +3967,13 @@ views:
                   - entity: input_number.battery_install_cost
                   - type: conditional
                     conditions:
-                      - entity: input_boolean.battery_2
+                      - entity: input_boolean.battery_2_enabled
                         state: "on"
                     row:
                       entity: input_datetime.battery_install_date_2
                   - type: conditional
                     conditions:
-                      - entity: input_boolean.battery_2
+                      - entity: input_boolean.battery_2_enabled
                         state: "on"
                     row:
                       entity: input_datetime.battery_install_cost_2
