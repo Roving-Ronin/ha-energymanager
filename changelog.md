@@ -11,7 +11,7 @@
 * BatteryLedger added from Roving-Ronin/BatteryLedger
 * Support for custom Marketplace repositories
 * Two new entities to track system purchase cost
-* Extra entity to track second purchase cost
+* Extra entity to track second purchase date
 #### Changed
 * Removed Goodwe firmware update from being queried as it is not consistently supported over model type
 * Moved Update Available markdown card to be directly under Update Result entity card
