@@ -5,11 +5,13 @@
   const CSS = `
 energy-manager-layout{display:block;min-width:0}energy-manager-layout *{box-sizing:border-box}
 energy-manager-layout{display:block;min-width:0}energy-manager-layout *{box-sizing:border-box}
-energy-manager-layout .em-tabs{display:flex;align-items:center;gap:5px;overflow-x:auto;white-space:nowrap;scrollbar-width:thin;padding-bottom:7px;-webkit-overflow-scrolling:touch}
+energy-manager-layout .em-tabs{display:flex;flex:1 1 240px;min-width:0;align-items:center;gap:5px;overflow-x:auto;white-space:nowrap;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
 energy-manager-layout .em-tabs button{flex-shrink:0}
 energy-manager-layout .em-tabs button[aria-selected="true"]{background:var(--primary-color,#03a9f4);color:var(--text-primary-color,#fff);font-weight:600}
 energy-manager-layout .em-tabs button:focus-visible{outline:2px solid var(--primary-color,#03a9f4);outline-offset:2px}
-energy-manager-layout .em-toolbar{display:flex;gap:7px;align-items:center;justify-content:flex-end;flex-wrap:wrap;margin:7px 0 12px}
+energy-manager-layout .em-toolbar{display:flex;gap:7px;align-items:center;justify-content:flex-end;flex-wrap:nowrap;margin:7px 0 12px;min-width:0}
+energy-manager-layout .em-toolbar>button{flex:0 0 auto;white-space:nowrap}
+energy-manager-layout .em-editing .em-toolbar{flex-wrap:wrap}
 energy-manager-layout .em-profile-select{max-width:180px;min-width:100px;border-radius:6px;padding:5px 6px;background:var(--card-background-color,var(--ha-card-background,#242424));color:var(--primary-text-color);border:1px solid var(--divider-color,#666)}
 energy-manager-layout .em-status{font-size:12px;opacity:.75;margin-right:auto}
 energy-manager-layout button{font:inherit;background:var(--card-background-color,var(--ha-card-background,#242424));color:var(--primary-text-color);border:1px solid var(--divider-color,#666);border-radius:6px;padding:5px 9px;cursor:pointer}
@@ -71,23 +73,41 @@ energy-manager-layout .em-hint{font-size:12px;opacity:.75;margin-top:9px}
     disconnectedCallback(){window.removeEventListener('resize',this._onViewportChange);}
     _deviceClass(){const w=window.innerWidth;return w<=590?'mobile':w<=900?'tablet':'desktop';}
     _deviceHidden(state){return state.locked&&state.lock_device===this._device?false:state.hidden||state.hidden_devices.includes(this._device);}
-    _meta(i){const o=this._configs[i]?.view_layout||{};return{id:String(o.em_id||`card-${i}`),name:String(o.em_name||`Card ${i+1}`),fixed:!!o.em_fixed&&this._activeProfile==='primary',required:!!o.em_required&&this._activeProfile==='primary',defaultTab:String(o.em_default_tab||'overview'),defaultColumn:Math.max(0,Math.min(2,Number(o.em_column??i%3))),defaultOrder:Number(o.em_order??i)};}
-    _eligible(i){const card=this._configs[i];if(card?.type!=='conditional'||!Array.isArray(card.conditions))return true;if(!this._hass?.states)return false;return card.conditions.every(rule=>{const state=this._hass.states[rule.entity]?.state;if(state===undefined)return false;const values=v=>(Array.isArray(v)?v:[v]).map(String);return(rule.state===undefined||values(rule.state).includes(state))&&(rule.state_not===undefined||!values(rule.state_not).includes(state));});}
-    _eligibilitySignature(){return this._configs.map((_,i)=>this._eligible(i)?'1':'0').join('');}
+    _meta(i){const o=this._configs[i]?.view_layout||{};return{id:String(o.em_id||`card-${i}`),name:String(o.em_name||`Card ${i+1}`),fixed:!!o.em_fixed,required:!!o.em_required&&this._activeProfile==='primary',defaultTab:String(o.em_default_tab||'overview'),defaultColumn:Math.max(0,Math.min(2,Number(o.em_column??i%3))),defaultOrder:Number(o.em_order??i)};}
+    _conditionsMatch(conditions){if(!Array.isArray(conditions)||!this._hass?.states)return false;return conditions.every(rule=>{const state=this._hass.states[rule.entity]?.state;if(state===undefined)return false;const values=v=>(Array.isArray(v)?v:[v]).map(String);return(rule.state===undefined||values(rule.state).includes(state))&&(rule.state_not===undefined||!values(rule.state_not).includes(state));});}
+    _eligible(i){const card=this._configs[i];return card?.type!=='conditional'||!Array.isArray(card.conditions)||this._conditionsMatch(card.conditions);}
+    _placeableInactive(i){return ['energy-control-timer','demand-period-active-notification'].includes(this._meta(i).id);}
+    _catalogueEligible(i){const card=this._configs[i],v=card?.view_layout||{};if(v.em_fixed||v.em_duplicate_of||v.em_companion_of)return false;if(Array.isArray(v.em_picker_conditions))return this._conditionsMatch(v.em_picker_conditions);return this._placeableInactive(i)||this._eligible(i);}
+    _eligibilitySignature(){return this._configs.map((_,i)=>(this._eligible(i)?'1':'0')+(this._catalogueEligible(i)?'1':'0')).join('');}
     _defaultWidth(i){const v=Number(this._configs[i]?.view_layout?.em_width);return Number.isInteger(v)?Math.max(1,Math.min(12,v)):12;}
-    _state(i){const m=this._meta(i),s=this._layout[m.id]||{};const col=Number.isInteger(s.col)?s.col:m.defaultColumn;const order=Number.isInteger(s.order)?s.order:m.defaultOrder;return{col:Math.max(0,Math.min(2,col)),order, width:(Number.isInteger(s.width)&&s.width>=1&&s.width<=12?s.width:this._defaultWidth(i)),hidden:!m.required&&(typeof s.hidden==='boolean'?s.hidden:(m.defaultTab==='inverter'&&this._activeProfile==='inverter'?false:this._configs[i]?.view_layout?.em_hidden===true)),hidden_devices:!m.required&&Array.isArray(s.hidden_devices)?s.hidden_devices.filter(v=>['desktop','tablet','mobile'].includes(v)):[],locked:typeof s.locked==='boolean'?s.locked:this._configs[i]?.view_layout?.em_locked===true,lock_device:['desktop','tablet','mobile'].includes(s.lock_device)?s.lock_device:null};}
+    _inverterCardIds(){return new Set(this._configs.map(c=>c.view_layout||{}).filter(v=>v.em_default_tab==='inverter').map(v=>v.em_duplicate_of||v.em_id).filter(Boolean));}
+    _state(i){const m=this._meta(i),s=this._layout[m.id]||{};const col=Number.isInteger(s.col)?s.col:m.defaultColumn;const order=Number.isInteger(s.order)?s.order:m.defaultOrder;const inverterDefault=this._activeProfile==='inverter'&&this._inverterCardIds().has(m.id);return{col:Math.max(0,Math.min(2,col)),order, width:(Number.isInteger(s.width)&&s.width>=1&&s.width<=12?s.width:this._defaultWidth(i)),hidden:!m.required&&(typeof s.hidden==='boolean'?s.hidden:(inverterDefault?false:this._configs[i]?.view_layout?.em_hidden===true)),hidden_devices:!m.required&&Array.isArray(s.hidden_devices)?s.hidden_devices.filter(v=>['desktop','tablet','mobile'].includes(v)):[],locked:typeof s.locked==='boolean'?s.locked:this._configs[i]?.view_layout?.em_locked===true,lock_device:['desktop','tablet','mobile'].includes(s.lock_device)?s.lock_device:null};}
     _selectedIds(tab){
-      if(Array.isArray(tab?.selected))return new Set(tab.selected);
+      const canonical=new Map(this._configs.map(c=>[c.view_layout?.em_id,c.view_layout?.em_duplicate_of||c.view_layout?.em_id]));
+      if(Array.isArray(tab?.selected))return new Set(tab.selected.map(id=>canonical.get(id)||id));
       const ids=new Set();
+      const inverterIds=this._inverterCardIds();
       for(let i=0;i<this._configs.length;i++){
-        const meta=this._meta(i),source=this._configs[i]?.view_layout?.em_default_tab||'overview';
-        if(tab?.id==='primary'&&source!=='inverter')ids.add(meta.id);
-        else if(tab?.id==='inverter'&&(source==='inverter'||Object.prototype.hasOwnProperty.call(tab.cards||{},meta.id)))ids.add(meta.id);
+        const meta=this._meta(i),v=this._configs[i]?.view_layout||{};
+        if(v.em_fixed||v.em_companion_of||v.em_duplicate_of)continue;
+        if(tab?.id==='primary'&&meta.defaultTab!=='inverter')ids.add(meta.id);
+        else if(tab?.id==='inverter'&&(inverterIds.has(meta.id)||Object.prototype.hasOwnProperty.call(tab.cards||{},meta.id)))ids.add(meta.id);
         else if(tab?.id!=='primary'&&tab?.id!=='inverter')ids.add(meta.id);
       }
       return ids;
     }
-    _eligibleItems(){const tab=this._profiles.find(t=>t.id===this._activeProfile),selected=this._selectedIds(tab);return this._configs.map((_,i)=>i).filter(i=>!this._meta(i).fixed&&this._eligible(i)&&selected.has(this._meta(i).id));}
+    _normaliseTabs(tabs){
+      const aliases=new Map(this._configs.map(c=>[c.view_layout?.em_id,c.view_layout?.em_duplicate_of]).filter(([,target])=>!!target));
+      for(const tab of tabs){
+        if(Array.isArray(tab.selected))tab.selected=[...new Set(tab.selected.map(id=>aliases.get(id)||id))];
+        for(const [oldId,target] of aliases){if(Object.prototype.hasOwnProperty.call(tab.cards||{},oldId)){
+          if(!Object.prototype.hasOwnProperty.call(tab.cards,target))tab.cards[target]=tab.cards[oldId];
+          delete tab.cards[oldId];
+        }}
+      }
+      return tabs;
+    }
+    _eligibleItems(){const tab=this._profiles.find(t=>t.id===this._activeProfile),selected=this._selectedIds(tab);return this._configs.map((_,i)=>i).filter(i=>this._catalogueEligible(i)&&selected.has(this._meta(i).id)&&(this._eligible(i)||(this._editing&&this._placeableInactive(i))));}
     _ordered(col,includeHidden=false){return this._eligibleItems().filter(i=>{const s=this._state(i);return s.col===col&&(includeHidden||!this._deviceHidden(s));}).sort((a,b)=>this._state(a).order-this._state(b).order||a-b);}
     _history(){
       if(!this._histories.has(this._activeProfile))this._histories.set(this._activeProfile,{undo:[],redo:[]});
@@ -148,7 +168,7 @@ energy-manager-layout .em-hint{font-size:12px;opacity:.75;margin-top:9px}
         item.setAttribute('role','tab');item.setAttribute('aria-selected',String(tab.id===this._activeProfile));
         item.disabled=this._busy||this._profileBusy;tabs.append(item);
       }
-      root.append(tabs);
+      toolbar.append(tabs);
       if(this._editing){
         const add=button('＋ New tab',()=>{const name=prompt('Name for the new tab:');if(name?.trim())this._profileAction('create',{name:name.trim()});});
         add.disabled=this._profiles.length>=8;toolbar.append(add);
@@ -166,26 +186,7 @@ energy-manager-layout .em-hint{font-size:12px;opacity:.75;margin-top:9px}
         importBtn.disabled=this._busy||this._profileBusy;toolbar.append(importBtn);
       }
       const customise=button(this._editing?'✓ Finish customising':'✥ Customise',()=>{this._editing=!this._editing;this._render();});toolbar.append(customise);
-      if(this._editing)toolbar.append(button('＋ Choose cards',()=>{this._catalogueOpen=!this._catalogueOpen;this._render();}));
-      toolbar.append(button('☷ Show / hide',()=>{this._picker=!this._picker;this._render();}));
-      if(this._editing&&this._catalogueOpen){
-        const panel=el('div','em-picker');panel.append(el('strong','','Cards on this tab'));
-        panel.append(el('p','em-hint','Select which Energy Manager cards belong to this tab.'));
-        const options=el('div','em-options'),tab=this._profiles.find(t=>t.id===this._activeProfile);
-        const selected=this._selectedIds(tab);
-        for(let i=0;i<this._configs.length;i++){
-          const meta=this._meta(i),opt=el('label','em-option'),check=el('input');
-          check.type='checkbox';check.checked=selected.has(meta.id);check.disabled=meta.required||meta.fixed;
-          check.addEventListener('change',()=>{
-            if(check.checked)selected.add(meta.id);else selected.delete(meta.id);
-            tab.selected=[...selected];
-            if(check.checked){const state=this._state(i);this._layout[meta.id]={...state,hidden:false,hidden_devices:[]};}
-            this._render();this._save();
-          });
-          opt.append(check,el('span','em-option-name',meta.name));options.append(opt);
-        }
-        panel.append(options);root.append(panel);
-      }
+      toolbar.append(button('☷ Cards / visibility',()=>{this._picker=!this._picker;this._render();}));
       if(this._editing){
         const history=this._history();
         const undo=button('↶ Undo',()=>this._travel('undo'));undo.disabled=!history.undo.length||this._profileBusy;toolbar.append(undo);
@@ -194,8 +195,8 @@ energy-manager-layout .em-hint{font-size:12px;opacity:.75;margin-top:9px}
         toolbar.append(button('⟳ Reload saved',()=>{if(this._busy||this._profileBusy)return;this._dirty=false;this._histories.delete(this._activeProfile);this._fetch();}));
       }
       if(this._picker){
-        const panel=el('div','em-picker');panel.append(el('strong','','Card visibility'));
-        panel.append(el('p','em-hint','Choose a device to edit its visibility. Settings are saved per tab for your Home Assistant user. Desktop >900px · Tablet 591–900px · Mobile ≤590px.'));
+        const panel=el('div','em-picker');panel.append(el('strong','','Cards and visibility'));
+        panel.append(el('p','em-hint','Add or remove cards from this tab. For included cards, choose whether they are visible on the selected device. Inactive warnings can still be placed while customising.'));
         const controls=el('div','em-picker-toolbar'),tabs=el('div','em-device-tabs');
         const currentDevice=this._pickerDevice;
         for(const device of ['desktop','tablet','mobile']){
@@ -207,36 +208,43 @@ energy-manager-layout .em-hint{font-size:12px;opacity:.75;margin-top:9px}
         const search=el('input','em-card-search');search.type='search';search.placeholder='Search cards…';search.setAttribute('aria-label','Search cards');search.value=this._pickerSearch;
         controls.append(search);panel.append(controls);
         const options=el('div','em-options'),entries=[];
-        for(const i of this._eligibleItems()){
-          const m=this._meta(i),state=this._state(i),opt=el('label','em-option'),input=el('input');
+        const activeTab=this._profiles.find(t=>t.id===this._activeProfile);
+        const selected=this._selectedIds(activeTab);
+        for(let i=0;i<this._configs.length;i++){
+          if(!this._catalogueEligible(i))continue;
+          const m=this._meta(i),state=this._state(i),opt=el('div','em-option'),member=el('input'),input=el('input');
+          const included=selected.has(m.id);
+          member.type='checkbox';member.checked=included;member.disabled=m.required;
+          member.title='Include on this tab';member.setAttribute('aria-label','Include '+m.name+' on this tab');
+          member.addEventListener('change',()=>{
+            if(member.checked){selected.add(m.id);const st=this._state(i);this._layout[m.id]={...st,hidden:false,hidden_devices:[]};}
+            else selected.delete(m.id);
+            activeTab.selected=[...selected];this._render();this._save();
+          });
           const visible=m.required||(state.locked&&state.lock_device===currentDevice)||(!state.hidden&&!state.hidden_devices.includes(currentDevice));
-          input.type='checkbox';input.checked=visible;input.disabled=m.required||(state.locked&&state.lock_device===currentDevice);
-          if(m.required||(state.locked&&state.lock_device===currentDevice))opt.classList.add('em-required');
+          input.type='checkbox';input.checked=included&&visible;input.disabled=!included||m.required||(state.locked&&state.lock_device===currentDevice);
+          input.title='Visible on '+currentDevice;input.setAttribute('aria-label','Show '+m.name+' on '+currentDevice);
           input.addEventListener('change',()=>{
-            if(m.required||(this._state(i).locked&&this._state(i).lock_device===currentDevice))return;
+            if(!included||m.required||(this._state(i).locked&&this._state(i).lock_device===currentDevice))return;
             const latest=this._state(i);
             const all=['desktop','tablet','mobile'];
             let hiddenDevices=latest.hidden?all.filter(d=>d!==currentDevice):[...latest.hidden_devices];
             if(input.checked)hiddenDevices=hiddenDevices.filter(d=>d!==currentDevice);
             else if(!hiddenDevices.includes(currentDevice))hiddenDevices.push(currentDevice);
-            // Keep the old global hidden flag for legacy exports, but use the
-            // per-device exclusions for edits in the new picker.
             this._update(i,{hidden:false,hidden_devices:hiddenDevices},currentDevice);
           });
-          opt.append(input,el('span','em-option-name',m.name+(m.required?' (always visible)':state.locked&&state.lock_device===currentDevice?' (locked here)':'')));
+          opt.append(member,el('span','em-option-name',m.name+(m.required?' (required on primary)':'')),input);
           options.append(opt);entries.push({opt,name:m.name.toLocaleLowerCase()});
         }
         const filter=()=>{const q=this._pickerSearch.trim().toLocaleLowerCase();for(const entry of entries)entry.opt.hidden=!!q&&!entry.name.includes(q);};
         search.addEventListener('input',()=>{this._pickerSearch=search.value;filter();});filter();
         panel.append(options);root.append(panel);
       }
-      // Fixed notifications are not movable or hideable, but belong to their
-      // configured main column. em_width is measured within that column.
       const columns=el('div','em-columns');root.append(columns);for(let col=0;col<3;col++){const column=el('div','em-column');column.dataset.column=String(col);columns.append(column);
-        const fixed=this._activeProfile==='primary'?this._configs.map((_,i)=>i).filter(i=>{const m=this._meta(i);return m.fixed&&m.defaultColumn===col&&this._eligible(i);}).sort((a,b)=>this._meta(a).defaultOrder-this._meta(b).defaultOrder||a-b):[];
+        const fixed=this._configs.map((_,i)=>i).filter(i=>{const m=this._meta(i);return m.fixed&&m.defaultColumn===col&&this._eligible(i);}).sort((a,b)=>this._meta(a).defaultOrder-this._meta(b).defaultOrder||a-b);
         if(fixed.length){const noticeArea=el('div','em-column-notices');column.append(noticeArea);for(const i of fixed){const tile=el('div','em-row'),slot=el('div','em-card');slot.style.gridColumn=`span ${this._defaultWidth(i)}`;slot.append(this._elements[i]);tile.append(slot);noticeArea.append(tile);}}
         const items=this._ordered(col);let row=[],used=0;
-        const flush=()=>{if(!row.length)return;const rowEl=el('div','em-row');rowEl.dataset.column=String(col);rowEl.dataset.before=String(row[0]);for(const idx of row){const state=this._state(idx),m=this._meta(idx),tile=el('div','em-tile');tile.style.gridColumn=`span ${state.width}`;tile.dataset.id=m.id;const head=el('div','em-edithead'),grip=el('span','em-grip','⠿');grip.title=state.locked?'Unlock this card to move it':'Drag this card';grip.draggable=this._editing&&!state.locked;if(state.locked)grip.classList.add('em-locked');head.append(grip,el('span','em-title',m.name));if(this._editing){const lock=button(state.locked?'🔒 Locked':'🔓 Lock',()=>this._update(idx,{locked:!this._state(idx).locked,lock_device:this._state(idx).locked?null:this._device}));lock.title=state.locked?'Allow this card to be moved or resized':'Prevent moving and resizing this card';if(state.locked)lock.classList.add('em-locked-button');head.append(lock);}if(!m.required&&!(state.locked&&state.lock_device===this._device))head.append(button('Hide',()=>this._hideOnCurrentDevice(idx)));const body=el('div','em-card');body.append(this._elements[idx]);tile.append(head,body);
+        const flush=()=>{if(!row.length)return;const rowEl=el('div','em-row');rowEl.dataset.column=String(col);rowEl.dataset.before=String(row[0]);for(const idx of row){const state=this._state(idx),m=this._meta(idx),tile=el('div','em-tile');tile.style.gridColumn=`span ${state.width}`;tile.dataset.id=m.id;const head=el('div','em-edithead'),grip=el('span','em-grip','⠿');grip.title=state.locked?'Unlock this card to move it':'Drag this card';grip.draggable=this._editing&&!state.locked;if(state.locked)grip.classList.add('em-locked');head.append(grip,el('span','em-title',m.name));if(this._editing){const lock=button(state.locked?'🔒 Locked':'🔓 Lock',()=>this._update(idx,{locked:!this._state(idx).locked,lock_device:this._state(idx).locked?null:this._device}));lock.title=state.locked?'Allow this card to be moved or resized':'Prevent moving and resizing this card';if(state.locked)lock.classList.add('em-locked-button');head.append(lock);}if(!m.required&&!(state.locked&&state.lock_device===this._device))head.append(button('Hide',()=>this._hideOnCurrentDevice(idx)));const body=el('div','em-card');body.append(this._elements[idx]);const companion=this._configs.findIndex(c=>c.view_layout?.em_companion_of===m.id);if(companion>=0)body.append(this._elements[companion]);tile.append(head,body);
           if(this._editing&&!state.locked){const handle=el('div','em-width-handle');handle.title='Drag horizontally to change width';handle.setAttribute('role','separator');handle.setAttribute('aria-label',`Resize ${m.name} horizontally`);tile.append(handle);this._wireResize(handle,tile,idx,col);}
           rowEl.append(tile);
           if(this._editing&&!state.locked){grip.addEventListener('dragstart',event=>{this._drag=idx;tile.classList.add('em-dragging');event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',m.id);});grip.addEventListener('dragend',()=>{tile.classList.remove('em-dragging');this._drag=null;});}
@@ -307,8 +315,8 @@ energy-manager-layout .em-hint{font-size:12px;opacity:.75;margin-top:9px}
       const response=await this._hass.callWS({type:'em_dashboard_tabs/get'});
       if(generation!==this._generation||this._dirty)return;
       this._rev=response.revision||0;
-      this._profiles=Array.isArray(response.tabs)?response.tabs:[];
-      if(!this._profiles.some(t=>t.id===this._activeProfile))this._activeProfile='primary';
+      this._profiles=this._normaliseTabs(Array.isArray(response.tabs)?response.tabs:[]);
+      this._activeProfile=this._profiles[0]?.id||'primary';
       this._layout=structuredClone(this._profiles.find(t=>t.id===this._activeProfile)?.cards||{});
       this._histories.clear();this._error='';this._render();
     }catch(e){this._error='Could not load user tabs: '+(e.message||e);this._render();}}
@@ -331,7 +339,7 @@ energy-manager-layout .em-hint{font-size:12px;opacity:.75;margin-top:9px}
       }else if(action==='delete'){
         if(active.id==='primary')return;
         this._profiles=this._profiles.filter(t=>t.id!==active.id);
-        this._activeProfile='primary';this._layout=structuredClone(this._profiles.find(t=>t.id==='primary').cards);
+        this._activeProfile=this._profiles[0].id;this._layout=structuredClone(this._profiles[0].cards);
       }else if(action==='move'){
         const index=this._profiles.indexOf(active),dest=index+params.offset;
         if(dest<0||dest>=this._profiles.length)return;
