@@ -4,6 +4,11 @@
   if (customElements.get(TAG)) return;
   const CSS = `
 energy-manager-layout{display:block;min-width:0}energy-manager-layout *{box-sizing:border-box}
+energy-manager-layout{display:block;min-width:0}energy-manager-layout *{box-sizing:border-box}
+energy-manager-layout .em-tabs{display:flex;align-items:center;gap:5px;overflow-x:auto;white-space:nowrap;scrollbar-width:thin;padding-bottom:7px;-webkit-overflow-scrolling:touch}
+energy-manager-layout .em-tabs button{flex-shrink:0}
+energy-manager-layout .em-tabs button[aria-selected="true"]{background:var(--primary-color,#03a9f4);color:var(--text-primary-color,#fff);font-weight:600}
+energy-manager-layout .em-tabs button:focus-visible{outline:2px solid var(--primary-color,#03a9f4);outline-offset:2px}
 energy-manager-layout .em-toolbar{display:flex;gap:7px;align-items:center;justify-content:flex-end;flex-wrap:wrap;margin:7px 0 12px}
 energy-manager-layout .em-profile-select{max-width:180px;min-width:100px;border-radius:6px;padding:5px 6px;background:var(--card-background-color,var(--ha-card-background,#242424));color:var(--primary-text-color);border:1px solid var(--divider-color,#666)}
 energy-manager-layout .em-status{font-size:12px;opacity:.75;margin-right:auto}
@@ -54,7 +59,7 @@ energy-manager-layout .em-hint{font-size:12px;opacity:.75;margin-top:9px}
   const el=(tag,cls='',value)=>{const node=document.createElement(tag);if(cls)node.className=cls;if(value!==undefined)node.textContent=value;return node;};
   const button=(label,fn)=>{const node=el('button','',label);node.type='button';node.addEventListener('click',fn);return node;};
   class Layout extends HTMLElement {
-    constructor(){super();this._config=null;this._configs=[];this._elements=[];this._layout={};this._hass=null;this._rev=0;this._editing=false;this._picker=false;this._pickerDevice='desktop';this._pickerSearch='';this._busy=false;this._dirty=false;this._error='';this._generation=0;this._eligibility='';this._drag=null;this._profiles=[{id:'everyday',name:'Everyday'}];this._activeProfile='everyday';this._profileBusy=false;this._histories=new Map();this._historyLimit=40;this._device=this._deviceClass();this._onViewportChange=()=>{const next=this._deviceClass();if(next!==this._device){this._device=next;this._render();}};}
+    constructor(){super();this._config=null;this._configs=[];this._elements=[];this._layout={};this._hass=null;this._rev=0;this._editing=false;this._picker=false;this._catalogueOpen=false;this._pickerDevice='desktop';this._pickerSearch='';this._busy=false;this._dirty=false;this._error='';this._generation=0;this._eligibility='';this._drag=null;this._profiles=[{id:'primary',name:'Overview',cards:{}}];this._activeProfile='primary';this._profileBusy=false;this._histories=new Map();this._historyLimit=40;this._device=this._deviceClass();this._onViewportChange=()=>{const next=this._deviceClass();if(next!==this._device){this._device=next;this._render();}};}
     setConfig(config){this._config=config;this._configs=config.cards||[];this._layout={};this._render();if(this._hass)this._fetch();}
     set cards(cards){const next=cards||[];const changed=next.length!==this._elements.length||next.some((v,i)=>v!==this._elements[i]);this._elements=next;if(changed)this._render();}
     get cards(){return this._elements;}
@@ -66,12 +71,12 @@ energy-manager-layout .em-hint{font-size:12px;opacity:.75;margin-top:9px}
     disconnectedCallback(){window.removeEventListener('resize',this._onViewportChange);}
     _deviceClass(){const w=window.innerWidth;return w<=590?'mobile':w<=900?'tablet':'desktop';}
     _deviceHidden(state){return state.locked&&state.lock_device===this._device?false:state.hidden||state.hidden_devices.includes(this._device);}
-    _meta(i){const o=this._configs[i]?.view_layout||{};return{id:String(o.em_id||`card-${i}`),name:String(o.em_name||`Card ${i+1}`),fixed:!!o.em_fixed,required:!!o.em_required,defaultColumn:Math.max(0,Math.min(2,Number(o.em_column??i%3))),defaultOrder:Number(o.em_order??i)};}
+    _meta(i){const o=this._configs[i]?.view_layout||{};return{id:String(o.em_id||`card-${i}`),name:String(o.em_name||`Card ${i+1}`),fixed:!!o.em_fixed&&this._activeProfile==='primary',required:!!o.em_required&&this._activeProfile==='primary',defaultColumn:Math.max(0,Math.min(2,Number(o.em_column??i%3))),defaultOrder:Number(o.em_order??i)};}
     _eligible(i){const card=this._configs[i];if(card?.type!=='conditional'||!Array.isArray(card.conditions))return true;if(!this._hass?.states)return false;return card.conditions.every(rule=>{const state=this._hass.states[rule.entity]?.state;if(state===undefined)return false;const values=v=>(Array.isArray(v)?v:[v]).map(String);return(rule.state===undefined||values(rule.state).includes(state))&&(rule.state_not===undefined||!values(rule.state_not).includes(state));});}
     _eligibilitySignature(){return this._configs.map((_,i)=>this._eligible(i)?'1':'0').join('');}
     _defaultWidth(i){const v=Number(this._configs[i]?.view_layout?.em_width);return Number.isInteger(v)?Math.max(1,Math.min(12,v)):12;}
     _state(i){const m=this._meta(i),s=this._layout[m.id]||{};const col=Number.isInteger(s.col)?s.col:m.defaultColumn;const order=Number.isInteger(s.order)?s.order:m.defaultOrder;return{col:Math.max(0,Math.min(2,col)),order, width:(Number.isInteger(s.width)&&s.width>=1&&s.width<=12?s.width:this._defaultWidth(i)),hidden:!m.required&&(typeof s.hidden==='boolean'?s.hidden:this._configs[i]?.view_layout?.em_hidden===true),hidden_devices:!m.required&&Array.isArray(s.hidden_devices)?s.hidden_devices.filter(v=>['desktop','tablet','mobile'].includes(v)):[],locked:typeof s.locked==='boolean'?s.locked:this._configs[i]?.view_layout?.em_locked===true,lock_device:['desktop','tablet','mobile'].includes(s.lock_device)?s.lock_device:null};}
-    _eligibleItems(){return this._configs.map((_,i)=>i).filter(i=>!this._meta(i).fixed&&this._eligible(i));}
+    _eligibleItems(){const selected=this._profiles.find(t=>t.id===this._activeProfile)?.selected;return this._configs.map((_,i)=>i).filter(i=>!this._meta(i).fixed&&this._eligible(i)&&(selected===null||selected===undefined||selected.includes(this._meta(i).id)));}
     _ordered(col,includeHidden=false){return this._eligibleItems().filter(i=>{const s=this._state(i);return s.col===col&&(includeHidden||!this._deviceHidden(s));}).sort((a,b)=>this._state(a).order-this._state(b).order||a-b);}
     _history(){
       if(!this._histories.has(this._activeProfile))this._histories.set(this._activeProfile,{undo:[],redo:[]});
@@ -126,16 +131,21 @@ energy-manager-layout .em-hint{font-size:12px;opacity:.75;margin-top:9px}
       const scroll=this._scrollSnapshot();
       this.replaceChildren();const style=el('style');style.textContent=CSS;this.append(style);const root=el('div',this._editing?'em-editing':'');this.append(root);
       const toolbar=el('div','em-toolbar');root.append(toolbar);if(this._error)toolbar.append(el('span','em-status',this._error));
-      const selector=el('select','em-profile-select');selector.title='Active shared dashboard profile';selector.setAttribute('aria-label','Active dashboard profile');
-      for(const profile of this._profiles){const option=el('option','',profile.name);option.value=profile.id;option.selected=profile.id===this._activeProfile;selector.append(option);}
-      selector.disabled=this._busy||this._profileBusy||!this._hass?.user?.is_admin;
-      selector.addEventListener('change',()=>this._profileAction('activate',{profile_id:selector.value}));
-      toolbar.append(el('span','em-status','Layout:'));toolbar.append(selector);
+      const tabs=el('div','em-tabs');tabs.setAttribute('role','tablist');
+      for(const tab of this._profiles){
+        const item=button(tab.name,()=>this._switchTab(tab.id));
+        item.setAttribute('role','tab');item.setAttribute('aria-selected',String(tab.id===this._activeProfile));
+        item.disabled=this._busy||this._profileBusy;tabs.append(item);
+      }
+      root.append(tabs);
       if(this._editing){
-        toolbar.append(button('＋ New profile',()=>{const name=prompt('Name for the new layout profile:');if(name!==null&&name.trim())this._profileAction('create',{name:name.trim(),cards:this._payload()});}));
-        toolbar.append(button('✎ Rename',()=>{const current=this._profiles.find(p=>p.id===this._activeProfile);const name=prompt('Rename layout profile:',current?.name||'');if(name!==null&&name.trim())this._profileAction('rename',{profile_id:this._activeProfile,name:name.trim()});}));
-        const remove=button('✕ Delete profile',()=>{if(this._profiles.length>1&&confirm('Delete the selected layout profile? This cannot be undone.'))this._profileAction('delete',{profile_id:this._activeProfile});});
-        remove.disabled=this._profiles.length<=1;toolbar.append(remove);
+        const add=button('＋ New tab',()=>{const name=prompt('Name for the new tab:');if(name?.trim())this._profileAction('create',{name:name.trim()});});
+        add.disabled=this._profiles.length>=8;toolbar.append(add);
+        toolbar.append(button('✎ Rename tab',()=>{const current=this._profiles.find(p=>p.id===this._activeProfile);const name=prompt('Rename tab:',current?.name||'');if(name?.trim())this._profileAction('rename',{name:name.trim()});}));
+        const remove=button('✕ Delete tab',()=>{if(confirm('Delete this tab?'))this._profileAction('delete',{});});
+        remove.disabled=this._activeProfile==='primary';toolbar.append(remove);
+        toolbar.append(button('← Move tab',()=>this._profileAction('move',{offset:-1})));
+        toolbar.append(button('Move tab →',()=>this._profileAction('move',{offset:1})));
         const exportBtn=button('↓ Export layout',()=>this._exportLayout());
         exportBtn.disabled=this._busy||this._profileBusy;toolbar.append(exportBtn);
         const fileInput=el('input');fileInput.type='file';fileInput.accept='.json,application/json';fileInput.style.display='none';
@@ -144,8 +154,28 @@ energy-manager-layout .em-hint{font-size:12px;opacity:.75;margin-top:9px}
         const importBtn=button('↑ Import layout',()=>fileInput.click());
         importBtn.disabled=this._busy||this._profileBusy;toolbar.append(importBtn);
       }
-      const customise=button(this._editing?'✓ Finish customising':'✥ Customise',()=>{this._editing=!this._editing;this._render();});customise.disabled=!this._hass?.user?.is_admin;toolbar.append(customise);
+      const customise=button(this._editing?'✓ Finish customising':'✥ Customise',()=>{this._editing=!this._editing;this._render();});toolbar.append(customise);
+      if(this._editing)toolbar.append(button('＋ Choose cards',()=>{this._catalogueOpen=!this._catalogueOpen;this._render();}));
       toolbar.append(button('☷ Show / hide',()=>{this._picker=!this._picker;this._render();}));
+      if(this._editing&&this._catalogueOpen){
+        const panel=el('div','em-picker');panel.append(el('strong','','Cards on this tab'));
+        panel.append(el('p','em-hint','Select which Energy Manager cards belong to this tab.'));
+        const options=el('div','em-options'),tab=this._profiles.find(t=>t.id===this._activeProfile);
+        const selected=tab?.selected===null||tab?.selected===undefined?
+          new Set(this._configs.map((_,i)=>this._meta(i).id)):new Set(tab.selected);
+        for(let i=0;i<this._configs.length;i++){
+          const meta=this._meta(i),opt=el('label','em-option'),check=el('input');
+          check.type='checkbox';check.checked=selected.has(meta.id);check.disabled=meta.required||meta.fixed;
+          check.addEventListener('change',()=>{
+            if(check.checked)selected.add(meta.id);else selected.delete(meta.id);
+            tab.selected=[...selected];
+            if(check.checked){const state=this._state(i);this._layout[meta.id]={...state,hidden:false,hidden_devices:[]};}
+            this._render();this._save();
+          });
+          opt.append(check,el('span','em-option-name',meta.name));options.append(opt);
+        }
+        panel.append(options);root.append(panel);
+      }
       if(this._editing){
         const history=this._history();
         const undo=button('↶ Undo',()=>this._travel('undo'));undo.disabled=!history.undo.length||this._profileBusy;toolbar.append(undo);
@@ -155,7 +185,7 @@ energy-manager-layout .em-hint{font-size:12px;opacity:.75;margin-top:9px}
       }
       if(this._picker){
         const panel=el('div','em-picker');panel.append(el('strong','','Card visibility'));
-        panel.append(el('p','em-hint','Choose a device to edit its visibility. Settings are saved per profile and shared by all devices. Desktop >900px · Tablet 591–900px · Mobile ≤590px.'));
+        panel.append(el('p','em-hint','Choose a device to edit its visibility. Settings are saved per tab for your Home Assistant user. Desktop >900px · Tablet 591–900px · Mobile ≤590px.'));
         const controls=el('div','em-picker-toolbar'),tabs=el('div','em-device-tabs');
         const currentDevice=this._pickerDevice;
         for(const device of ['desktop','tablet','mobile']){
@@ -170,7 +200,7 @@ energy-manager-layout .em-hint{font-size:12px;opacity:.75;margin-top:9px}
         for(const i of this._eligibleItems()){
           const m=this._meta(i),state=this._state(i),opt=el('label','em-option'),input=el('input');
           const visible=m.required||(state.locked&&state.lock_device===currentDevice)||(!state.hidden&&!state.hidden_devices.includes(currentDevice));
-          input.type='checkbox';input.checked=visible;input.disabled=m.required||(state.locked&&state.lock_device===currentDevice)||!this._hass?.user?.is_admin;
+          input.type='checkbox';input.checked=visible;input.disabled=m.required||(state.locked&&state.lock_device===currentDevice);
           if(m.required||(state.locked&&state.lock_device===currentDevice))opt.classList.add('em-required');
           input.addEventListener('change',()=>{
             if(m.required||(this._state(i).locked&&this._state(i).lock_device===currentDevice))return;
@@ -193,7 +223,7 @@ energy-manager-layout .em-hint{font-size:12px;opacity:.75;margin-top:9px}
       // Fixed notifications are not movable or hideable, but belong to their
       // configured main column. em_width is measured within that column.
       const columns=el('div','em-columns');root.append(columns);for(let col=0;col<3;col++){const column=el('div','em-column');column.dataset.column=String(col);columns.append(column);
-        const fixed=this._configs.map((_,i)=>i).filter(i=>{const m=this._meta(i);return m.fixed&&m.defaultColumn===col&&this._eligible(i);}).sort((a,b)=>this._meta(a).defaultOrder-this._meta(b).defaultOrder||a-b);
+        const fixed=this._activeProfile==='primary'?this._configs.map((_,i)=>i).filter(i=>{const m=this._meta(i);return m.fixed&&m.defaultColumn===col&&this._eligible(i);}).sort((a,b)=>this._meta(a).defaultOrder-this._meta(b).defaultOrder||a-b):[];
         if(fixed.length){const noticeArea=el('div','em-column-notices');column.append(noticeArea);for(const i of fixed){const tile=el('div','em-row'),slot=el('div','em-card');slot.style.gridColumn=`span ${this._defaultWidth(i)}`;slot.append(this._elements[i]);tile.append(slot);noticeArea.append(tile);}}
         const items=this._ordered(col);let row=[],used=0;
         const flush=()=>{if(!row.length)return;const rowEl=el('div','em-row');rowEl.dataset.column=String(col);rowEl.dataset.before=String(row[0]);for(const idx of row){const state=this._state(idx),m=this._meta(idx),tile=el('div','em-tile');tile.style.gridColumn=`span ${state.width}`;tile.dataset.id=m.id;const head=el('div','em-edithead'),grip=el('span','em-grip','⠿');grip.title=state.locked?'Unlock this card to move it':'Drag this card';grip.draggable=this._editing&&!state.locked;if(state.locked)grip.classList.add('em-locked');head.append(grip,el('span','em-title',m.name));if(this._editing){const lock=button(state.locked?'🔒 Locked':'🔓 Lock',()=>this._update(idx,{locked:!this._state(idx).locked,lock_device:this._state(idx).locked?null:this._device}));lock.title=state.locked?'Allow this card to be moved or resized':'Prevent moving and resizing this card';if(state.locked)lock.classList.add('em-locked-button');head.append(lock);}if(!m.required&&!(state.locked&&state.lock_device===this._device))head.append(button('Hide',()=>this._hideOnCurrentDevice(idx)));const body=el('div','em-card');body.append(this._elements[idx]);tile.append(head,body);
@@ -258,41 +288,52 @@ energy-manager-layout .em-hint{font-size:12px;opacity:.75;margin-top:9px}
       }
       return specs;
     }
+    _switchTab(id){
+      if(this._busy||this._profileBusy||id===this._activeProfile)return;
+      const tab=this._profiles.find(t=>t.id===id);if(!tab)return;
+      this._activeProfile=id;this._layout=structuredClone(tab.cards||{});this._picker=false;this._catalogueOpen=false;this._render();
+    }
     async _fetch(){if(!this._hass?.callWS)return;const generation=++this._generation;try{
-      let response=await this._hass.callWS({type:'em_dashboard_layout/get'});
-      // Migration is idempotent and server-side: all profiles update atomically.
-      // Non-admin viewers still see YAML defaults without changing saved data.
-      if(this._hass.user?.is_admin&&this._configs.length){
-        try{
-          const synced=await this._hass.callWS({type:'em_dashboard_layout/sync',revision:response.revision||0,specs:this._migrationSpecs()});
-          response=synced;
-        }catch(e){
-          // A simultaneous update may invalidate the revision. Reload the latest state
-          // rather than overwriting another administrator's changes.
-          response=await this._hass.callWS({type:'em_dashboard_layout/get'});
-          this._error='Layout migration could not be saved: '+(e.message||e);
-        }
-      }
-if(generation!==this._generation||this._dirty)return;this._rev=response.revision||0;this._profiles=Array.isArray(response.profiles)&&response.profiles.length?response.profiles:[{id:'everyday',name:'Everyday'}];this._activeProfile=response.active_profile||'everyday';const cards=response.cards||{};this._histories.clear();this._layout={};for(const [id,s] of Object.entries(cards)){if(Number.isInteger(s.col)&&Number.isInteger(s.order)){this._layout[id]={col:s.col,order:s.order,hidden:s.hidden===true,hidden_devices:Array.isArray(s.hidden_devices)?s.hidden_devices:[],locked:s.locked===true,lock_device:s.lock_device||null,...(Number.isInteger(s.width)&&s.width>=1&&s.width<=12?{width:s.width}:{})};}else if(s.hidden===true||Array.isArray(s.hidden_devices))this._layout[id]={hidden:s.hidden===true,hidden_devices:Array.isArray(s.hidden_devices)?s.hidden_devices:[],locked:s.locked===true,lock_device:s.lock_device||null};}this._error='';this._render();}catch(e){this._error='Could not load shared layout: '+(e.message||e);this._render();}}
+      const response=await this._hass.callWS({type:'em_dashboard_tabs/get'});
+      if(generation!==this._generation||this._dirty)return;
+      this._rev=response.revision||0;
+      this._profiles=Array.isArray(response.tabs)?response.tabs:[];
+      if(!this._profiles.some(t=>t.id===this._activeProfile))this._activeProfile='primary';
+      this._layout=structuredClone(this._profiles.find(t=>t.id===this._activeProfile)?.cards||{});
+      this._histories.clear();this._error='';this._render();
+    }catch(e){this._error='Could not load user tabs: '+(e.message||e);this._render();}}
     async _profileAction(action,params){
-      if(this._busy||this._profileBusy){this._error='Finish saving the current layout first.';this._render();return;}
-      this._profileBusy=true;
-      try{
-        const response=await this._hass.callWS({type:'em_dashboard_layout/profile',action,revision:this._rev,...params});
-        this._rev=response.revision;this._profiles=response.profiles;this._activeProfile=response.active_profile;
-        if(action==='create')this._histories.delete(this._activeProfile);
-        if(action==='delete')for(const id of this._histories.keys())if(!this._profiles.some(p=>p.id===id))this._histories.delete(id);
-        this._layout={};for(const [id,s] of Object.entries(response.cards||{})){
-          if(Number.isInteger(s.col)&&Number.isInteger(s.order))this._layout[id]={col:s.col,order:s.order,hidden:s.hidden===true,hidden_devices:Array.isArray(s.hidden_devices)?s.hidden_devices:[],locked:s.locked===true,lock_device:s.lock_device||null,...(Number.isInteger(s.width)&&s.width>=1&&s.width<=12?{width:s.width}:{})};
-          else if(s.hidden===true||Array.isArray(s.hidden_devices))this._layout[id]={hidden:s.hidden===true,hidden_devices:Array.isArray(s.hidden_devices)?s.hidden_devices:[],locked:s.locked===true};
+      if(this._busy||this._profileBusy)return;
+      const previous=structuredClone(this._profiles);
+      const oldId=this._activeProfile;
+      const active=this._profiles.find(t=>t.id===this._activeProfile);
+      if(!active)return;
+      if(action==='create'){
+        if(this._profiles.length>=8)return;
+        const name=params.name?.trim();if(!name||name.length>50)return;
+        const id='tab-'+crypto.randomUUID();
+        const cards={};for(let i=0;i<this._configs.length;i++){
+          const m=this._meta(i);if(!m.fixed)cards[m.id]={col:m.defaultColumn,order:m.defaultOrder,width:this._defaultWidth(i),hidden:true,hidden_devices:[],locked:false,lock_device:null};
         }
-        this._error='';
-      }catch(e){this._error='Profile change failed: '+(e.message||e);}
-      finally{this._profileBusy=false;this._render();}
+        this._profiles.push({id,name,cards,selected:[]});this._activeProfile=id;this._layout=structuredClone(cards);
+      }else if(action==='rename'){
+        const name=params.name?.trim();if(!name||name.length>50)return;active.name=name;
+      }else if(action==='delete'){
+        if(active.id==='primary')return;
+        this._profiles=this._profiles.filter(t=>t.id!==active.id);
+        this._activeProfile='primary';this._layout=structuredClone(this._profiles.find(t=>t.id==='primary').cards);
+      }else if(action==='move'){
+        const index=this._profiles.indexOf(active),dest=index+params.offset;
+        if(dest<0||dest>=this._profiles.length)return;
+        this._profiles.splice(index,1);this._profiles.splice(dest,0,active);
+      }else return;
+      this._render();
+      try{await this._save();}
+      catch(e){this._profiles=previous;this._activeProfile=oldId;this._layout=structuredClone(previous.find(t=>t.id===oldId)?.cards||{});this._error='Tab change failed: '+(e.message||e);this._render();}
     }
     _exportLayout(){
       if(this._busy||this._profileBusy){this._error='Finish saving the layout before exporting.';this._render();return;}
-      const name=this._profiles.find(p=>p.id===this._activeProfile)?.name||'Everyday';
+      const name=this._profiles.find(p=>p.id===this._activeProfile)?.name||'Overview';
       const data={format:'energy-manager-layout-profile',version:1,name,cards:this._payload()};
       const blob=new Blob([JSON.stringify(data,null,2)+'\n'],{type:'application/json'});
       const url=URL.createObjectURL(blob);
@@ -330,7 +371,8 @@ if(generation!==this._generation||this._dirty)return;this._rev=response.revision
         const name=input.trim();
         if(!name||name.length>50)throw new Error('Profile name must be 1–50 characters.');
         // Only matched IDs are included. Any cards added later use their YAML defaults.
-        await this._profileAction('create',{name,cards});
+        if(this._profiles.length>=8)throw new Error('Maximum of eight tabs reached.');
+        const id='tab-'+crypto.randomUUID();this._profiles.push({id,name,cards,selected:[]});this._activeProfile=id;this._layout=structuredClone(cards);await this._save();this._render();
       }catch(e){this._error='Import failed: '+(e.message||e);this._render();}
     }
     _payload(){
@@ -343,7 +385,7 @@ if(generation!==this._generation||this._dirty)return;this._rev=response.revision
       }
       return result;
     }
-    async _save(){this._dirty=true;if(this._busy)return;this._busy=true;while(this._dirty){this._dirty=false;try{const result=await this._hass.callWS({type:'em_dashboard_layout/save',cards:this._payload(),revision:this._rev,profile_id:this._activeProfile});this._rev=result.revision;this._error='';}catch(e){this._error='Save failed: '+(e.message||e);break;}}this._busy=false;const status=this.querySelector('.em-status');if(status)status.textContent=this._error||'';else if(this._error)this._render();}
+    async _save(){this._dirty=true;if(this._busy)return;this._busy=true;let failure=null;while(this._dirty){this._dirty=false;try{const current=this._profiles.find(t=>t.id===this._activeProfile);if(current)current.cards=this._payload();const result=await this._hass.callWS({type:'em_dashboard_tabs/save',tabs:this._profiles,revision:this._rev});this._rev=result.revision;this._error='';}catch(e){failure=e;this._error='Save failed: '+(e.message||e);break;}}this._busy=false;const status=this.querySelector('.em-status');if(status)status.textContent=this._error||'';else if(this._error)this._render();if(failure)throw failure;}
   }
   customElements.define(TAG,Layout);
 })();
