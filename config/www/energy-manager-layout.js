@@ -372,7 +372,17 @@ energy-manager-layout .em-hint{font-size:12px;opacity:.75;margin-top:9px}
         if(!name||name.length>50)throw new Error('Profile name must be 1–50 characters.');
         // Only matched IDs are included. Any cards added later use their YAML defaults.
         if(this._profiles.length>=8)throw new Error('Maximum of eight tabs reached.');
-        const id='tab-'+crypto.randomUUID();this._profiles.push({id,name,cards,selected:[]});this._activeProfile=id;this._layout=structuredClone(cards);await this._save();this._render();
+        const id='tab-'+crypto.randomUUID();
+        const previous=structuredClone(this._profiles),oldId=this._activeProfile;
+        this._profiles.push({id,name,cards,selected:Object.keys(cards)});
+        this._activeProfile=id;this._layout=structuredClone(cards);
+        try{await this._save();}
+        catch(error){
+          this._profiles=previous;this._activeProfile=oldId;
+          this._layout=structuredClone(previous.find(t=>t.id===oldId)?.cards||{});
+          throw error;
+        }
+        this._render();
       }catch(e){this._error='Import failed: '+(e.message||e);this._render();}
     }
     _payload(){
