@@ -49,7 +49,7 @@ class EMBatteryBarCard extends HTMLElement {
           flex: 1;
           min-width: 0;
           border-radius: 2px;
-          background: #292b2d;
+          background: var(--em-battery-empty-color, #292b2d);
           transition: background 0.4s ease;
         }
         .percent {
@@ -101,11 +101,16 @@ class EMBatteryBarCard extends HTMLElement {
     const count = this.segmentElements.length;
     const active = Math.round((soc / 100) * count);
 
+    const emptyColor = this._hass.themes?.darkMode
+      ? "#292b2d"
+      : "#e8e8e8";
+    this.style.setProperty("--em-battery-empty-color", emptyColor);
+
     this.segmentElements.forEach((segment, i) => {
       const hue = (i / Math.max(1, count - 1)) * 120;
       segment.style.background = i < active
         ? `hsl(${hue}, 62%, 43%)`
-        : "#292b2d";
+        : emptyColor;
     });
 
     this.shadowRoot.querySelector(".percent").textContent =
