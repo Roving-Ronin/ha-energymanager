@@ -388,7 +388,7 @@ input_select:
     icon: mdi:format-list-bulleted  
 
 input_boolean:
-  battery_2:
+  battery_2_enabled:
     name: Enable Battery 2
     icon: mdi:battery-plus-outline
   
