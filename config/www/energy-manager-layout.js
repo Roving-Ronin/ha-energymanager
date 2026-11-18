@@ -63,7 +63,7 @@ energy-manager-layout .em-hint{font-size:12px;opacity:.75;margin-top:9px}
     setConfig(config){this._config=config;this._configs=config.cards||[];this._layout={};this._render();if(this._hass)this._fetch();}
     set cards(cards){const next=cards||[];const changed=next.length!==this._elements.length||next.some((v,i)=>v!==this._elements[i]);this._elements=next;if(changed)this._render();}
     get cards(){return this._elements;}
-    set hass(value){const first=!this._hass;this._hass=value;const signature=this._eligibilitySignature();if(signature!==this._eligibility){this._eligibility=signature;this._render();}if(first&&this._config)this._fetch();}
+    set hass(value){const first=!this._hass;const userChanged=this._hass?.user?.id&&value?.user?.id&&this._hass.user.id!==value.user.id;this._hass=value;if(userChanged){this._profiles=[{id:'primary',name:'Overview',cards:{},selected:null}];this._activeProfile='primary';this._layout={};this._generation++;this._histories.clear();}const signature=this._eligibilitySignature();if(signature!==this._eligibility||userChanged)this._render();if((first||userChanged)&&this._config)this._fetch();}
     get hass(){return this._hass;}
     set narrow(value){this._narrow=value;}
     get narrow(){return this._narrow;}
@@ -71,11 +71,11 @@ energy-manager-layout .em-hint{font-size:12px;opacity:.75;margin-top:9px}
     disconnectedCallback(){window.removeEventListener('resize',this._onViewportChange);}
     _deviceClass(){const w=window.innerWidth;return w<=590?'mobile':w<=900?'tablet':'desktop';}
     _deviceHidden(state){return state.locked&&state.lock_device===this._device?false:state.hidden||state.hidden_devices.includes(this._device);}
-    _meta(i){const o=this._configs[i]?.view_layout||{};return{id:String(o.em_id||`card-${i}`),name:String(o.em_name||`Card ${i+1}`),fixed:!!o.em_fixed&&this._activeProfile==='primary',required:!!o.em_required&&this._activeProfile==='primary',defaultColumn:Math.max(0,Math.min(2,Number(o.em_column??i%3))),defaultOrder:Number(o.em_order??i)};}
+    _meta(i){const o=this._configs[i]?.view_layout||{};return{id:String(o.em_id||`card-${i}`),name:String(o.em_name||`Card ${i+1}`),fixed:!!o.em_fixed&&this._activeProfile==='primary',required:!!o.em_required&&this._activeProfile==='primary',defaultTab:String(o.em_default_tab||'overview'),defaultColumn:Math.max(0,Math.min(2,Number(o.em_column??i%3))),defaultOrder:Number(o.em_order??i)};}
     _eligible(i){const card=this._configs[i];if(card?.type!=='conditional'||!Array.isArray(card.conditions))return true;if(!this._hass?.states)return false;return card.conditions.every(rule=>{const state=this._hass.states[rule.entity]?.state;if(state===undefined)return false;const values=v=>(Array.isArray(v)?v:[v]).map(String);return(rule.state===undefined||values(rule.state).includes(state))&&(rule.state_not===undefined||!values(rule.state_not).includes(state));});}
     _eligibilitySignature(){return this._configs.map((_,i)=>this._eligible(i)?'1':'0').join('');}
     _defaultWidth(i){const v=Number(this._configs[i]?.view_layout?.em_width);return Number.isInteger(v)?Math.max(1,Math.min(12,v)):12;}
-    _state(i){const m=this._meta(i),s=this._layout[m.id]||{};const col=Number.isInteger(s.col)?s.col:m.defaultColumn;const order=Number.isInteger(s.order)?s.order:m.defaultOrder;return{col:Math.max(0,Math.min(2,col)),order, width:(Number.isInteger(s.width)&&s.width>=1&&s.width<=12?s.width:this._defaultWidth(i)),hidden:!m.required&&(typeof s.hidden==='boolean'?s.hidden:this._configs[i]?.view_layout?.em_hidden===true),hidden_devices:!m.required&&Array.isArray(s.hidden_devices)?s.hidden_devices.filter(v=>['desktop','tablet','mobile'].includes(v)):[],locked:typeof s.locked==='boolean'?s.locked:this._configs[i]?.view_layout?.em_locked===true,lock_device:['desktop','tablet','mobile'].includes(s.lock_device)?s.lock_device:null};}
+    _state(i){const m=this._meta(i),s=this._layout[m.id]||{};const col=Number.isInteger(s.col)?s.col:m.defaultColumn;const order=Number.isInteger(s.order)?s.order:m.defaultOrder;return{col:Math.max(0,Math.min(2,col)),order, width:(Number.isInteger(s.width)&&s.width>=1&&s.width<=12?s.width:this._defaultWidth(i)),hidden:!m.required&&(typeof s.hidden==='boolean'?s.hidden:(m.defaultTab==='inverter'&&this._activeProfile==='inverter'?false:this._configs[i]?.view_layout?.em_hidden===true)),hidden_devices:!m.required&&Array.isArray(s.hidden_devices)?s.hidden_devices.filter(v=>['desktop','tablet','mobile'].includes(v)):[],locked:typeof s.locked==='boolean'?s.locked:this._configs[i]?.view_layout?.em_locked===true,lock_device:['desktop','tablet','mobile'].includes(s.lock_device)?s.lock_device:null};}
     _eligibleItems(){const selected=this._profiles.find(t=>t.id===this._activeProfile)?.selected;return this._configs.map((_,i)=>i).filter(i=>!this._meta(i).fixed&&this._eligible(i)&&(selected===null||selected===undefined||selected.includes(this._meta(i).id)));}
     _ordered(col,includeHidden=false){return this._eligibleItems().filter(i=>{const s=this._state(i);return s.col===col&&(includeHidden||!this._deviceHidden(s));}).sort((a,b)=>this._state(a).order-this._state(b).order||a-b);}
     _history(){
@@ -311,7 +311,7 @@ energy-manager-layout .em-hint{font-size:12px;opacity:.75;margin-top:9px}
       if(action==='create'){
         if(this._profiles.length>=8)return;
         const name=params.name?.trim();if(!name||name.length>50)return;
-        const id='tab-'+crypto.randomUUID();
+        const id='tab-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);
         const cards={};for(let i=0;i<this._configs.length;i++){
           const m=this._meta(i);if(!m.fixed)cards[m.id]={col:m.defaultColumn,order:m.defaultOrder,width:this._defaultWidth(i),hidden:true,hidden_devices:[],locked:false,lock_device:null};
         }
@@ -372,7 +372,7 @@ energy-manager-layout .em-hint{font-size:12px;opacity:.75;margin-top:9px}
         if(!name||name.length>50)throw new Error('Profile name must be 1–50 characters.');
         // Only matched IDs are included. Any cards added later use their YAML defaults.
         if(this._profiles.length>=8)throw new Error('Maximum of eight tabs reached.');
-        const id='tab-'+crypto.randomUUID();
+        const id='tab-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);
         const previous=structuredClone(this._profiles),oldId=this._activeProfile;
         this._profiles.push({id,name,cards,selected:Object.keys(cards)});
         this._activeProfile=id;this._layout=structuredClone(cards);
