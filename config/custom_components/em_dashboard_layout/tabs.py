@@ -14,10 +14,18 @@ MAX_TABS = 8
 MAX_BYTES = 300_000
 
 
-def default_tabs() -> list[dict]:
+def default_tabs(root: Path | None = None) -> list[dict]:
+    inverter_cards = {}
+    if root is not None:
+        template = root / "layout_profiles" / "v1.json"
+        if template.is_file():
+            payload = read_json(template)
+            if not isinstance(payload, dict) or not isinstance(payload.get("cards"), dict):
+                raise ValueError("Invalid bundled v1 layout")
+            inverter_cards = payload["cards"]
     return [
         {"id": "primary", "name": "Overview", "cards": {}},
-        {"id": "inverter", "name": "Inverter", "cards": {}},
+        {{"id": "inverter", "name": "Inverter", "cards": inverter_cards, "selected": None},
     ]
 
 
