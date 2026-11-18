@@ -74,8 +74,16 @@ def validate_tabs(tabs: object, *, migration: bool = False) -> list[dict]:
             raise ValueError("Invalid card collection")
         if any(not isinstance(k, str) or len(k) > 120 or not isinstance(v, dict) for k, v in cards.items()):
             raise ValueError("Invalid card layout")
+        selected = tab.get("selected")
+        if selected is not None:
+            if (not isinstance(selected, list) or len(selected) > 500 or
+                    any(not isinstance(card_id, str) or not 1 <= len(card_id) <= 120
+                        for card_id in selected)):
+                raise ValueError("Invalid selected-card list")
+            selected = list(dict.fromkeys(selected))
         ids.add(tid)
-        result.append({"id": tid, "name": name.strip(), "cards": cards})
+        result.append({"id": tid, "name": name.strip(), "cards": cards,
+                       "selected": selected})
     if "primary" not in ids:
         raise ValueError("Primary tab must be retained")
     return result
