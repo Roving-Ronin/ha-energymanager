@@ -2443,7 +2443,7 @@ input_datetime:
     has_time: false
 
   battery_install_date_2:
-    name: Battery Install Date 2
+    name: Battery Install Date (2)
     icon: mdi:home-battery
     has_date: true
     has_time: false
