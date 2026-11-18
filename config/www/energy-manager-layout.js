@@ -58,6 +58,7 @@ energy-manager-layout .em-drop-end.em-target{border:2px dashed var(--primary-col
 energy-manager-layout .em-hint{font-size:12px;opacity:.75;margin-top:9px}
 @media(max-width:900px){energy-manager-layout .em-columns{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:900px){energy-manager-layout .em-toolbar{flex-wrap:wrap}energy-manager-layout .em-tabs{flex:1 1 100%}energy-manager-layout .em-toolbar-actions{flex:1 1 100%}}
+@media(max-width:590px){energy-manager-layout .em-toolbar-actions{display:none}energy-manager-layout .em-tabs{flex:1 1 100%;width:100%}}
 `;
   const el=(tag,cls='',value)=>{const node=document.createElement(tag);if(cls)node.className=cls;if(value!==undefined)node.textContent=value;return node;};
   const button=(label,fn)=>{const node=el('button','',label);node.type='button';node.addEventListener('click',fn);return node;};
@@ -160,6 +161,9 @@ energy-manager-layout .em-hint{font-size:12px;opacity:.75;margin-top:9px}
         window.scrollTo(snapshot.windowX,snapshot.windowY);
     }
     _render(){if(!this.isConnected||!this._config||this._elements.length!==this._configs.length)return;
+      if(this._device==='mobile'){
+        this._editing=false;this._picker=false;this._catalogueOpen=false;
+      }
       const scroll=this._scrollSnapshot();
       this.replaceChildren();const style=el('style');style.textContent=CSS;this.append(style);const root=el('div',this._editing?'em-editing':'');this.append(root);
       const toolbar=el('div','em-toolbar');root.append(toolbar);if(this._error)toolbar.append(el('span','em-status',this._error));
@@ -170,7 +174,7 @@ energy-manager-layout .em-hint{font-size:12px;opacity:.75;margin-top:9px}
         item.disabled=this._busy||this._profileBusy;tabs.append(item);
       }
       toolbar.append(tabs);
-      const actions=el('div','em-toolbar-actions');toolbar.append(actions);
+      const actions=el('div','em-toolbar-actions');if(this._device!=='mobile')toolbar.append(actions);
       if(this._editing){
         const add=button('＋ New tab',()=>{const name=prompt('Name for the new tab:');if(name?.trim())this._profileAction('create',{name:name.trim()});});
         add.disabled=this._profiles.length>=8;actions.append(add);
