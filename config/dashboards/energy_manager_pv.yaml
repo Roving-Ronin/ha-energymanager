@@ -3964,6 +3964,19 @@ views:
               - type: entities
                 entities:
                   - entity: input_datetime.battery_install_date
+                  - entity: input_number.battery_install_cost
+                  - type: conditional
+                    conditions:
+                      - entity: input_boolean.battery_2
+                        state: "on"
+                    row:
+                      entity: input_datetime.battery_install_date_2
+                  - type: conditional
+                    conditions:
+                      - entity: input_boolean.battery_2
+                        state: "on"
+                    row:
+                      entity: input_datetime.battery_install_cost_2
                   - entity: input_number.inverter_import_limit
                     name: Inverter Size (kW)
                   - entity: input_number.battery_charge_power_hardlimit
