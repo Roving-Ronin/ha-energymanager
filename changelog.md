@@ -4,6 +4,10 @@
 <summary><strong>2.0.1- 2026-11-xx</strong></summary>
 
 ### Added
+* PV Dashboard update
+  * Profiles have been replaced with tabs
+  * Up to eight tabs can be created for different views
+  * Individual Home Assistant users get their own PV Dashboard tabs
 * Marketplace Config-template-card, used for Energy Consumption Card on dashboard
 * Energy Consumption Card as new card in dashboard, hidden by default
 * Battery Level Bar as new card in dashboard, hidden by default
@@ -20,6 +24,7 @@
 * AlphaESS script update
   * PV not displaying if using secondary modbus PV address
   * Load not displaying if using secondary modbus PV address
+* Import and Export tallies should now report from each interval, even when value is the same as previous
 
 </details>
  
