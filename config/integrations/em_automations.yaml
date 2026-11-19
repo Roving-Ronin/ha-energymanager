@@ -1457,6 +1457,43 @@ automation:
                   entity_id: input_select.inverter_ems_mode
                 data:
                   option: "Self-Consumption mode"
+              - variables:
+                  fox_min_soc_entity: >-
+                    {{ integration_entities('foxess_ws')
+                       | select('match', '^number\.')
+                       | select('search', '_min_soc_on_grid$')
+                       | list | first | default('', true) }}
+                  fox_export_limit_entity: >-
+                    {{ integration_entities('foxess_ws')
+                       | select('match', '^number\.')
+                       | select('search', '_export_limit$')
+                       | list | first | default('', true) }}
+              - if:
+                  - condition: template
+                    value_template: >-
+                      {{ fox_min_soc_entity != ''
+                         and has_value(fox_min_soc_entity)
+                         and states('input_number.inverter_min_soc') | float(-1)
+                             != states(fox_min_soc_entity) | float(-1) }}
+                then:
+                  - action: input_number.set_value
+                    target:
+                      entity_id: input_number.inverter_min_soc
+                    data:
+                      value: "{{ states(fox_min_soc_entity) | float }}"
+              - if:
+                  - condition: template
+                    value_template: >-
+                      {{ fox_export_limit_entity != ''
+                         and has_value(fox_export_limit_entity)
+                         and states('input_number.inverter_export_power_limit_input') | float(-1)
+                             != states(fox_export_limit_entity) | float(-1) }}
+                then:
+                  - action: input_number.set_value
+                    target:
+                      entity_id: input_number.inverter_export_power_limit_input
+                    data:
+                      value: "{{ states(fox_export_limit_entity) | float }}"                  
           - conditions:
               - condition: template
                 value_template: "{{ states('input_select.inverter_brand') == 'fronius' }}"
