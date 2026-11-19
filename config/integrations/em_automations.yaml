@@ -1174,7 +1174,7 @@ automation:
           title: "Inverter Connection Lost"
           message: >
             The {{ states('input_select.inverter_brand') | title }} inverter appears to be offline.
-            Please check your network connection and modbus settings.
+            Please check your network connection and {{ 'FoxESS Cloud integration' if is_state('input_select.inverter_brand', 'foxess') else 'modbus settings' }}.
           notification_id: "inverter_offline"
     mode: restart
   - id: "clear_inverter_connection_notification"
@@ -1240,9 +1240,9 @@ automation:
               - unavailable
               - unknown
       - condition: template
-        value_template: "{{ states('input_select.inverter_brand') in ['sungrow', 'sigenergy', 'alphaess', 'goodwe', 'goodwe_et', 'goodwe_int', 'fronius', 'solaredge'] }}"
+        value_template: "{{ states('input_select.inverter_brand') in ['sungrow', 'sigenergy', 'alphaess', 'goodwe', 'goodwe_et', 'goodwe_int', 'foxess', 'fronius', 'solaredge'] }}"
     action:
-      - delay: "00:00:10" # Wait for modbus to initialize
+      - delay: "00:00:10"
       - choose:
           - conditions:
               - condition: template
@@ -1383,7 +1383,33 @@ automation:
                 target:
                   entity_id: input_select.inverter_ems_mode
                 data:
-                  option: "Self-Consumption mode"        
+                  option: "Self-Consumption mode"
+          - conditions:
+              - condition: template
+                value_template: "{{ is_state('input_select.inverter_brand', 'foxess') }}"
+            sequence:
+              - wait_template: >-
+                  {{ (integration_entities('foxess_ws')
+                      | select('match', '^switch\.')
+                      | select('search', 'scheduler') | list | count > 0)
+                     and (integration_entities('foxess_ws')
+                      | select('match', '^select\.')
+                      | select('search', 'work_mode') | list | count > 0) }}
+                timeout: "00:01:00"
+                continue_on_timeout: false
+              - action: script.set_inverter_charge_discharge_mode
+                data:
+                  option: "Stop"
+              - action: input_select.select_option
+                target:
+                  entity_id: input_select.inverter_charge_discharge_mode
+                data:
+                  option: "Stop"
+              - action: input_select.select_option
+                target:
+                  entity_id: input_select.inverter_ems_mode
+                data:
+                  option: "Self-Consumption mode"
           - conditions:
               - condition: template
                 value_template: "{{ states('input_select.inverter_brand') == 'fronius' }}"
@@ -1637,7 +1663,7 @@ automation:
         event: start
     condition:
       - condition: template
-        value_template: "{{ states('input_text.saved_inverter_brand') in ['sungrow', 'sigenergy', 'alphaess','goodwe', 'goodwe_et', 'fronius', 'solaredge'] }}"
+        value_template: "{{ states('input_text.saved_inverter_brand') in ['sungrow', 'sigenergy', 'alphaess','goodwe', 'goodwe_et', 'goodwe_int', 'foxess', 'fronius', 'solaredge'] }}"
     action:
       - delay: "00:00:05"
       - service: input_select.select_option
@@ -2014,6 +2040,36 @@ automation:
       - service: homeassistant.update_entity
         target:
           entity_id: sensor.energy_manager_decision_timestamp
+      - if:
+          - condition: template
+            value_template: >-
+              {{ is_state('input_select.inverter_brand', 'foxess')
+                 and states('input_select.inverter_charge_discharge_mode')
+                     in ['Forced Charge', 'Forced Discharge']
+                 and is_state('switch.energy_control_on_off', 'on') }}
+        then:
+          - action: script.foxess_apply_ems_schedule
+  - id: foxess_dismiss_success_notifications
+    alias: "FoxESS - Dismiss Successful Scheduler Notifications"
+    description: "Dismiss routine FoxESS scheduler success notifications, keeping errors"
+    trigger:
+      - platform: persistent_notification
+        update_type:
+          - added
+          - updated
+    condition:
+      - condition: template
+        value_template: >-
+          {{ trigger.notification.title in [
+            'FoxESS Scheduler Updated',
+            'FoxESS Peak fdPwr Updated'
+          ] }}
+    action:
+      - service: persistent_notification.dismiss
+        data:
+          notification_id: "{{ trigger.notification.notification_id }}"
+    mode: queued
+    max: 10        
   - id: sellbuy_mode_enabled
     alias: "Sell-Buy Mode Enabled"
     description: "Turn off High-Sell mode if Sell-Buy Mode is enabled"
