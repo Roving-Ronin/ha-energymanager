@@ -208,7 +208,7 @@ command_line:
 
 # === ENERGY_MANAGER_SENSORS_END ===
 
-# === ENERGY_MANAGER_UPDATE_INPUTS_START v2.0.1 ===
+# === ENERGY_MANAGER_UPDATE_INPUTS_START v2.1.0 ===
 input_select:
   inverter_brand:
     name: Inverter Brand
