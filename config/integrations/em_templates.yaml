@@ -1,4 +1,4 @@
-# === ENERGY_MANAGER_TEMPLATES_START v1.3.0 ===
+# === ENERGY_MANAGER_TEMPLATES_START 2.1.0 ===
 template:
   - sensor:
       - name: "inverter_device_type"
@@ -8,6 +8,9 @@ template:
             {{ not is_state('sensor.sungrow_device_type_code', 'unavailable') }}
           {% elif brand == 'sigenergy' %}
             {{ states('sensor.sigenergy_device_type_code') not in ['unavailable', 'unknown', 'none'] }}
+          {% elif brand == 'foxess' %}
+            {% set fox = integration_entities('foxess_ws') | select('match', '^sensor\\.') | select('search', '_solar_power$') | list | first | default('', true) %}
+            {{ has_value(fox) }}
           {% elif brand == 'fronius' %}
             {{ not is_state('sensor.fronius_inverter_model', 'unavailable') }}
           {% elif brand == 'solaredge' %}
@@ -104,6 +107,8 @@ template:
             {{ states('sensor.sigenergy_device_type_code') }}
           {% elif brand == 'alphaess' %}
             Not supported
+          {% elif brand == 'foxess' %}
+            FoxESS (Cloud)
           {% elif brand == 'fronius' %}
             {{ states('sensor.fronius_inverter_model') }}
           {% elif brand == 'solaredge' %}
@@ -127,6 +132,9 @@ template:
               or
               states('sensor.on_grid_mode') not in ['unknown', 'unavailable']
             }}
+          {% elif brand == 'foxess' %}
+            {% set fox = integration_entities('foxess_ws') | select('match', '^select\\.') | select('search', '_work_mode$') | list | first | default('', true) %}
+            {{ has_value(fox) }}
           {% elif brand == 'fronius' %}
             {{ not is_state('sensor.fronius_system_state', 'unavailable') }}
           {% elif brand == 'solaredge' %}
@@ -190,6 +198,10 @@ template:
               if states('sensor.goodwe_on_grid_mode') not in ['unknown','unavailable']
               else states('sensor.on_grid_mode')
             }}
+          {% elif brand == 'foxess' %}
+            {% set fox = integration_entities('foxess_ws') | select('match', '^select\\.') | select('search', '_work_mode$') | list | first | default('', true) %}
+            {% set mode = states(fox) %}
+            {{ 'Self-Consumption mode' if mode == 'self_use' else 'Forced Mode' if mode in ['force_charge', 'force_discharge'] else mode | replace('_', ' ') | title }}
           {% elif brand == 'fronius' %}
             {% set mode = states('sensor.fronius_system_state') | int(default=0) %}
             {% if mode == 1 %}
@@ -248,6 +260,9 @@ template:
               or
               states('sensor.on_grid_mode') not in 'unavailable'
             }}
+          {% elif brand == 'foxess' %}
+            {% set fox = integration_entities('foxess_ws') | select('match', '^binary_sensor\\.') | select('search', '_websocket_connected$') | list | first | default('', true) %}
+            {{ fox != '' }}
           {% elif brand == 'fronius' %}
             {{ not is_state('sensor.fronius_inverter_work_mode', 'unavailable') }}
           {% elif brand == 'solaredge' %}
@@ -322,6 +337,9 @@ template:
               if states('sensor.goodwe_on_grid_mode') not in ['unknown','unavailable']
               else states('sensor.on_grid_mode')
             }}
+          {% elif brand == 'foxess' %}
+            {% set fox = integration_entities('foxess_ws') | select('match', '^binary_sensor\\.') | select('search', '_websocket_connected$') | list | first | default('', true) %}
+            {{ 'Connected' if is_state(fox, 'on') else 'Disconnected' }}
           {% elif brand == 'fronius' %}
             {% set state_code = states('sensor.fronius_inverter_work_mode') | int(default=0) %}
             {% if state_code == 1 %}
@@ -395,6 +413,9 @@ template:
           goodwe_et_active: >
             {{ is_state('input_select.inverter_brand', 'goodwe_et') and
                 is_state('input_boolean.restart_required', 'off') }}
+          foxess_active: >
+            {{ is_state('input_select.inverter_brand', 'foxess') and
+                is_state('input_boolean.restart_required', 'off') }}
           fronius_active: >
             {{ is_state('input_select.inverter_brand', 'fronius') and
                 is_state('input_boolean.restart_required', 'off') }}
@@ -423,6 +444,9 @@ template:
               or
               states('sensor.operation_mode_code') not in ['unknown', 'unavailable']
             }}
+          {% elif brand == 'foxess' %}
+            {% set fox = integration_entities('foxess_ws') | select('match', '^select\\.') | select('search', '_work_mode$') | list | first | default('', true) %}
+            {{ has_value(fox) }}
           {% elif brand == 'fronius' %}
             {{ not is_state('sensor.fronius_ems_mode', 'unavailable')}}
           {% elif brand == 'solaredge' %}
@@ -496,6 +520,10 @@ template:
             {% else %}
               Debug: {{ state }}
             {% endif %}
+          {% elif brand == 'foxess' %}
+            {% set fox = integration_entities('foxess_ws') | select('match', '^select\\.') | select('search', '_work_mode$') | list | first | default('', true) %}
+            {% set mode = states(fox) %}
+            {{ 'Forced charge' if mode == 'force_charge' else 'Forced discharge' if mode == 'force_discharge' else 'Stop (default)' }}
           {% elif brand == 'fronius' %}
             {% set state = states('sensor.fronius_ems_mode') | int(default=0) %}
             {% if state == 1 %}
@@ -1243,6 +1271,14 @@ template:
             {% elif state == 'Eco discharge mode' %}Forced Discharge
             {% else %}Unknown
             {% endif %}
+          {% elif brand == 'foxess' %}
+            {% set fox = integration_entities('foxess_ws') | select('match', '^select\\.') | select('search', '_work_mode$') | list | first | default('', true) %}
+            {% set mode = states(fox) %}
+            {% if mode == 'force_charge' %}Force Charge
+            {% elif mode == 'force_discharge' %}Force Discharge
+            {% elif mode == 'self_use' %}Self Consumption
+            {% else %}Unknown
+            {% endif %}
           {% elif brand == 'fronius' %}
             {% set storage_mode = states('sensor.fronius_ems_mode') | int(default=0) %}
             {% if storage_mode == 0 %}Self Consumption
@@ -1309,6 +1345,12 @@ template:
           {{ is_state('input_select.inverter_brand', 'goodwe_et') and
               is_state('input_boolean.restart_required', 'off') }}
         icon: mdi:solar-power
+      - name: "FoxESS Active"
+        unique_id: foxess_active
+        state: >
+          {{ is_state('input_select.inverter_brand', 'foxess') and
+              is_state('input_boolean.restart_required', 'off') }}
+        icon: mdi:solar-power
       - name: "Fronius Active"
         unique_id: fronius_active
         state: >
@@ -1352,6 +1394,9 @@ template:
                 + additional
               ) > 10
             }}
+          {% elif brand == 'foxess' %}
+            {% set fox = integration_entities('foxess_ws') | select('match', '^sensor\\.') | select('search', '_solar_power$') | list | first | default('', true) %}
+            {{ (states(fox) | float(0) + additional) > 10 }}
           {% elif brand == 'fronius' %}
               {% set pv1 = states('sensor.fronius_pv1_power_raw') | float(0) %}
               {% set pv2 = states('sensor.fronius_pv2_power_raw') | float(0) %}
@@ -1381,6 +1426,9 @@ template:
               or states('sensor.goodwe_pv_power') not in ['unknown', 'unavailable', 'none']
               or states('sensor.pv_power') not in ['unknown', 'unavailable', 'none']
             }}
+          {% elif brand == 'foxess' %}
+            {% set fox = integration_entities('foxess_ws') | select('match', '^sensor\\.') | select('search', '_solar_power$') | list | first | default('', true) %}
+            {{ add_ok or has_value(fox) }}
           {% elif brand == 'fronius' %}
             {{ add_ok or (states('sensor.fronius_pv1_power_raw') not in ['unavailable', 'unknown', 'none']) }}
           {% elif brand == 'solaredge' %}
@@ -1407,6 +1455,9 @@ template:
                 else states('sensor.battery_power')
               ) | float(0) < -10
             }}
+          {% elif brand == 'foxess' %}
+            {% set fox = integration_entities('foxess_ws') | select('match', '^sensor\\.') | select('search', '_battery_power$') | list | first | default('', true) %}
+            {{ states(fox) | float(0) > 10 }}
           {% elif brand == 'fronius' %}
             {{ states('sensor.fronius_battery_charge_power') | float(0) > 10 }}
           {% elif brand == 'solaredge' %}
@@ -1429,6 +1480,9 @@ template:
               or
               states('sensor.battery_power') not in ['unknown', 'unavailable', 'none']
             }}
+          {% elif brand == 'foxess' %}
+            {% set fox = integration_entities('foxess_ws') | select('match', '^sensor\\.') | select('search', '_battery_power$') | list | first | default('', true) %}
+            {{ has_value(fox) }}
           {% elif brand == 'fronius' %}
             {{ states('sensor.fronius_battery_charge_power') not in ['unavailable', 'unknown', 'none'] }}
           {% elif brand == 'solaredge' %}
@@ -1455,6 +1509,9 @@ template:
                 else states('sensor.battery_power')
               ) | float(0) > 10
             }}
+          {% elif brand == 'foxess' %}
+            {% set fox = integration_entities('foxess_ws') | select('match', '^sensor\\.') | select('search', '_battery_power$') | list | first | default('', true) %}
+            {{ states(fox) | float(0) < -10 }}
           {% elif brand == 'fronius' %}
             {{ states('sensor.fronius_battery_discharge_power') | float(0) > 10 }}
           {% elif brand == 'solaredge' %}
@@ -1477,6 +1534,9 @@ template:
               or
               states('sensor.battery_power') not in ['unknown', 'unavailable', 'none']
             }}
+          {% elif brand == 'foxess' %}
+            {% set fox = integration_entities('foxess_ws') | select('match', '^sensor\\.') | select('search', '_battery_power$') | list | first | default('', true) %}
+            {{ has_value(fox) }}
           {% elif brand == 'fronius' %}
             {{ states('sensor.fronius_battery_discharge_power') not in ['unavailable', 'unknown', 'none'] }}
           {% elif brand == 'solaredge' %}
@@ -1506,6 +1566,9 @@ template:
                 ) | float(0)
             %}
             {{ max(0, grid_power) }}
+          {% elif brand == 'foxess' %}
+            {% set fox = integration_entities('foxess_ws') | select('match', '^sensor\\.') | select('search', '_grid_power$') | list | first | default('', true) %}
+            {{ states(fox) | float(0) < -10 }}
           {% elif brand == 'fronius' %}
             {% set grid_power = states('sensor.fronius_grid_active_power') | float(0) %}
             {{ max(0, -grid_power) }}
@@ -1530,6 +1593,9 @@ template:
               or
               states('sensor.active_power') not in ['unknown', 'unavailable', 'none']
             }}
+          {% elif brand == 'foxess' %}
+            {% set fox = integration_entities('foxess_ws') | select('match', '^sensor\\.') | select('search', '_grid_power$') | list | first | default('', true) %}
+            {{ has_value(fox) }}
           {% elif brand == 'fronius' %}
             {{ states('sensor.fronius_grid_active_power') not in ['unavailable', 'unknown', 'none'] }}
           {% elif brand == 'solaredge' %}
@@ -1559,6 +1625,9 @@ template:
               ) | float(0)
             %}
             {{ max(0, -grid_power) }}
+          {% elif brand == 'foxess' %}
+            {% set fox = integration_entities('foxess_ws') | select('match', '^sensor\\.') | select('search', '_grid_power$') | list | first | default('', true) %}
+            {{ states(fox) | float(0) > 10 }}
           {% elif brand == 'fronius' %}
             {% set grid_power = states('sensor.fronius_grid_active_power') | float(0) %}
             {{ max(0, grid_power) }}
@@ -1583,6 +1652,9 @@ template:
               or
               states('sensor.active_power') not in ['unknown', 'unavailable', 'none']
             }}
+          {% elif brand == 'foxess' %}
+            {% set fox = integration_entities('foxess_ws') | select('match', '^sensor\\.') | select('search', '_grid_power$') | list | first | default('', true) %}
+            {{ has_value(fox) }}
           {% elif brand == 'fronius' %}
             {{ states('sensor.fronius_grid_active_power') not in ['unavailable', 'unknown', 'none'] }}
           {% elif brand == 'solaredge' %}
