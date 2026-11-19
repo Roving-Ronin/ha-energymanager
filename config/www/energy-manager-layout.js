@@ -1,4 +1,4 @@
-/* Energy Manager Layout Manager v7.3.9 */
+/* Energy Manager Layout Manager v8.0.0 */
 (() => {
   const TAG = 'energy-manager-layout';
   if (customElements.get(TAG)) return;
