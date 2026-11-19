@@ -3530,6 +3530,35 @@ script:
             ⚠️ MANUAL RESTART REQUIRED
             Go to Settings → System → Restart when ready.
           notification_id: manual_config_change
+  manual_activate_foxess:
+    alias: "Manual Activate FoxESS"
+    icon: mdi:solar-power
+    sequence:
+      - action: persistent_notification.create
+        data:
+          title: "Starting FoxESS Activation"
+          message: "Activating FoxESS integration-based configuration..."
+          notification_id: manual_activation_progress
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.inverter_brand
+        data:
+          option: "foxess"
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.restart_required
+      - action: persistent_notification.create
+        data:
+          title: "✅ Manual FoxESS Activation Complete"
+          message: >
+            FoxESS has been selected as the inverter brand.
+
+            The FoxESS WebSocket Bridge integration must already
+            be installed and configured in Home Assistant.
+
+            No Modbus configuration or Home Assistant restart
+            is required.
+          notification_id: manual_config_change
   manual_activate_fronius:
     alias: "Manual Activate Fronius"
     icon: mdi:solar-power
@@ -3607,6 +3636,7 @@ script:
             • AlphaESS active: {{ states('binary_sensor.alphaess_active') }}
             • Goodwe active: {{ states('binary_sensor.goodwe_active') }}
             • Goodwe_ET active: {{ states('binary_sensor.goodwe_et_active') }}
+            • FoxESS active: {{ states('binary_sensor.foxess_active') }}
             • Fronius active: {{ states('binary_sensor.fronius_active') }}
             • SolarEdge active: {{ states('binary_sensor.solaredge_active') }}
           notification_id: config_check
