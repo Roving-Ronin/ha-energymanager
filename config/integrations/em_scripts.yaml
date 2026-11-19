@@ -111,6 +111,9 @@ script:
                 entity_id: input_select.inverter_brand
                 state: "foxess"
             sequence:
+              - action: input_boolean.turn_off
+                target:
+                  entity_id: input_boolean.restart_required
               - action: persistent_notification.create
                 data:
                   title: "FoxESS Cloud Integration Activation"
@@ -3383,10 +3386,6 @@ script:
                 {{ states('switch.goodwe_grid_export_limit_switch') }}
             {% elif brand == 'fronius' %}
               {{ states('sensor.fronius_export_power_limit_enabled') | string }}
-            {% elif brand == 'solaredge' %}
-                true
-            {% elif brand == 'foxess' %}
-              true
             {% endif %}
           retain: true        
   manual_activate_sungrow:
