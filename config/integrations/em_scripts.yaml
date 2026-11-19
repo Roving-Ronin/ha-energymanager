@@ -109,6 +109,17 @@ script:
           - conditions:
               - condition: state
                 entity_id: input_select.inverter_brand
+                state: "foxess"
+            sequence:
+              - action: persistent_notification.create
+                data:
+                  title: "FoxESS Cloud Integration Activation"
+                  message: "FoxESS WebSocket Bridge must be installed and configured. No Modbus configuration is required."
+                  notification_id: manual_activation_progress
+              - stop: "FoxESS uses its HA integration and requires no Modbus restart"
+          - conditions:
+              - condition: state
+                entity_id: input_select.inverter_brand
                 state: "fronius"
             sequence:
               - action: persistent_notification.create
@@ -150,6 +161,80 @@ script:
             ⚠️ MANUAL RESTART REQUIRED
             Go to Settings → System → Restart when ready.
           notification_id: inverter_config_change
+  foxess_apply_ems_schedule:
+    alias: "FoxESS: Apply Energy Manager Schedule"
+    description: "Apply a rolling 10-minute FoxESS charge/discharge window"
+    mode: queued
+    max: 3
+    fields:
+      requested_mode:
+        description: "Optional override from set_inverter_charge_discharge_mode"
+    sequence:
+      - variables:
+          fox_mode: "{{ requested_mode | default(states('input_select.inverter_charge_discharge_mode'), true) }}"
+          fox_switch: >-
+            {{ integration_entities('foxess_ws') | select('match', '^switch\.') | select('search', 'scheduler') | list | first | default('', true) }}
+          fox_select: >-
+            {{ integration_entities('foxess_ws') | select('match', '^select\.') | select('search', 'work_mode') | list | first | default('', true) }}
+          fox_start: "{{ now() - timedelta(minutes=1) if now().hour or now().minute else now() }}"
+          fox_end: >-
+            {{ [now() + timedelta(minutes=9), today_at('23:59:00')] | min }}
+          fox_min_soc: "{{ states('input_number.inverter_min_soc') | int(10) }}"
+          fox_max_soc: "{{ states('input_number.inverter_max_soc') | int(100) }}"
+          fox_charge_cap: >-
+            {{ [states('input_number.inverter_max_charge_power') | int(0),
+                states('input_number.battery_charge_power_hardlimit') | int(0)] | min }}
+          fox_discharge_cap: >-
+            {{ [states('input_number.inverter_max_discharge_power') | int(0),
+                states('input_number.battery_discharge_power_hardlimit') | int(0)] | min }}
+          fox_requested_w: "{{ states('input_number.inverter_charge_discharge_power') | int(0) }}"
+          fox_power: >-
+            {% set limit = fox_charge_cap | int(0) if fox_mode == 'Forced Charge' else fox_discharge_cap | int(0) %}
+            {{ [[fox_requested_w | int(0), 0] | max, limit, 30000] | min }}
+      - if:
+          - condition: template
+            value_template: "{{ not fox_switch or not fox_select }}"
+        then:
+          - stop: "FoxESS WebSocket integration not configured or control entities not found"
+            error: true
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ fox_mode in ['Forced Charge', 'Forced Discharge'] and fox_power | int(0) > 0 }}"
+            sequence:
+              - action: foxess_ws.set_scheduler
+                data:
+                  groups:
+                    - startHour: "{{ as_datetime(fox_start).hour }}"
+                      startMinute: "{{ as_datetime(fox_start).minute }}"
+                      endHour: "{{ as_datetime(fox_end).hour }}"
+                      endMinute: "{{ as_datetime(fox_end).minute }}"
+                      workMode: "{{ 'ForceCharge' if fox_mode == 'Forced Charge' else 'ForceDischarge' }}"
+                      extraParam:
+                        fdSoc: "{{ fox_max_soc | int if fox_mode == 'Forced Charge' else fox_min_soc | int }}"
+                        fdPwr: "{{ fox_power | int }}"
+                        minSocOnGrid: "{{ fox_min_soc | int }}"
+                        maxSoc: "{{ fox_max_soc | int }}"
+              - if:
+                  - condition: template
+                    value_template: "{{ not is_state(fox_switch, 'on') }}"
+                then:
+                  - action: switch.turn_on
+                    target:
+                      entity_id: "{{ fox_switch }}"
+        default:
+          - if:
+              - condition: template
+                value_template: "{{ not is_state(fox_switch, 'off') }}"
+            then:
+              - action: switch.turn_off
+                target:
+                  entity_id: "{{ fox_switch }}"
+          - action: select.select_option
+            target:
+              entity_id: "{{ fox_select }}"
+            data:
+              option: self_use
   set_inverter_ems_mode:
     alias: "Set Inverter EMS Mode"
     description: "Sets EMS mode based on selected inverter brand"
@@ -233,6 +318,15 @@ script:
                   unit: !secret modbus_slave
                   address: 57348 # 0xE004 Storage Control Mode
                   value: "{{ mode_value | int }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ is_state('input_select.inverter_brand', 'foxess') }}"
+            sequence:
+              - condition: template
+                value_template: "{{ is_state('input_select.inverter_ems_mode', 'Self-Consumption mode') }}"
+              - action: script.foxess_apply_ems_schedule
+                data:
+                  requested_mode: Stop
   set_inverter_charge_discharge_mode:
     alias: "Set Inverter Charge/Discharge Mode"
     description: "Sets charge/discharge mode using generic options mapped to brand-specific implementations"
@@ -791,6 +885,13 @@ script:
                           value: 63871
           - conditions:
               - condition: template
+                value_template: "{{ is_state('input_select.inverter_brand', 'foxess') }}"
+            sequence:
+              - action: script.foxess_apply_ems_schedule
+                data:
+                  requested_mode: "{{ option }}"
+          - conditions:
+              - condition: template
                 value_template: "{{ states('input_select.inverter_brand') == 'goodwe_int' }}"
             sequence:
               - choose:
@@ -1129,6 +1230,26 @@ script:
                   value: "{{ soc_value }}"
           - conditions:
               - condition: template
+                value_template: "{{ is_state('input_select.inverter_brand', 'foxess') }}"
+            sequence:
+              - choose:
+                  - conditions:
+                      - condition: template
+                        value_template: "{{ states('input_select.inverter_charge_discharge_mode') in ['Forced Charge', 'Forced Discharge'] }}"
+                    sequence:
+                      # The running scheduler contains minSocOnGrid; avoid an OpenAPI
+                      # settings write while the scheduler is active (error 44098).
+                      - action: script.foxess_apply_ems_schedule
+                default:
+                  - action: number.set_value
+                    target:
+                      entity_id: >-
+                        {{ integration_entities('foxess_ws') | select('match', '^number\.')
+                           | select('search', 'min_soc_on_grid$') | list | first }}
+                    data:
+                      value: "{{ states('input_number.inverter_min_soc') | int }}"
+          - conditions:
+              - condition: template
                 value_template: "{{ states('input_select.inverter_brand') == 'fronius' }}"
             sequence:
               - action: system_log.write
@@ -1188,6 +1309,13 @@ script:
                   unit: !secret modbus_slave
                   address: 0x0855
                   value: "{{ soc_value }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ is_state('input_select.inverter_brand', 'foxess') }}"
+            sequence:
+              - condition: template
+                value_template: "{{ is_state('input_select.inverter_charge_discharge_mode', 'Forced Charge') or is_state('input_select.inverter_charge_discharge_mode', 'Forced Discharge') }}"
+              - action: script.foxess_apply_ems_schedule
           - conditions:
               - condition: template
                 value_template: "{{ states('input_select.inverter_brand') == 'fronius' }}"
@@ -1363,6 +1491,13 @@ script:
                         hard_limit_w | float(0)] | min | round(0) }}
           - conditions:
               - condition: template
+                value_template: "{{ is_state('input_select.inverter_brand', 'foxess') }}"
+            sequence:
+              - condition: template
+                value_template: "{{ is_state('input_select.inverter_charge_discharge_mode', 'Forced Charge') or is_state('input_select.inverter_charge_discharge_mode', 'Forced Discharge') }}"
+              - action: script.foxess_apply_ems_schedule
+          - conditions:
+              - condition: template
                 value_template: "{{ states('input_select.inverter_brand') == 'fronius' }}"
             sequence:
               - variables:
@@ -1486,6 +1621,14 @@ script:
                   value: "{{ power_percentage }}"
           - conditions:
               - condition: template
+                value_template: "{{ is_state('input_select.inverter_brand', 'foxess') }}"
+            sequence:
+              - condition: state
+                entity_id: input_select.inverter_charge_discharge_mode
+                state: "Forced Charge"
+              - action: script.foxess_apply_ems_schedule
+          - conditions:
+              - condition: template
                 value_template: "{{ states('input_select.inverter_brand') == 'fronius' }}"
             sequence:
               - variables:
@@ -1572,6 +1715,14 @@ script:
                   entity_id: number.goodwe_eco_mode_power
                 data:
                   value: "{{ power_percentage }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ is_state('input_select.inverter_brand', 'foxess') }}"
+            sequence:
+              - condition: state
+                entity_id: input_select.inverter_charge_discharge_mode
+                state: "Forced Discharge"
+              - action: script.foxess_apply_ems_schedule
           - conditions:
               - condition: template
                 value_template: "{{ states('input_select.inverter_brand') == 'fronius' }}"
@@ -1692,6 +1843,28 @@ script:
                   entity_id: number.goodwe_grid_export_limit
                 data:
                   value: "{{ power_value }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ is_state('input_select.inverter_brand', 'foxess') }}"
+            sequence:
+              - condition: state
+                entity_id: input_boolean.inverter_export_power_limit_enabled_input
+                state: "on"
+              - condition: template
+                value_template: "{{ states('input_number.inverter_export_power_hardlimit') | int(0) > 0 }}"
+              - condition: template
+                value_template: >-
+                  {{ integration_entities('foxess_ws') | select('match', '^number\.')
+                     | select('search', 'export_limit$') | list | count > 0 }}
+              - action: number.set_value
+                target:
+                  entity_id: >-
+                    {{ integration_entities('foxess_ws') | select('match', '^number\.')
+                       | select('search', 'export_limit$') | list | first }}
+                data:
+                  value: >-
+                    {{ [[states('input_number.inverter_export_power_limit_input') | int(0), 0] | max,
+                        states('input_number.inverter_export_power_hardlimit') | int(0), 30000] | min }}
           - conditions:
               - condition: template
                 value_template: "{{ states('input_select.inverter_brand') == 'fronius' }}"
@@ -1977,11 +2150,30 @@ script:
               - condition: template
                 value_template: "{{ states('input_select.inverter_brand') == 'sigenergy' }}"
             sequence:
-              # Sigenergy export power limits are always active when set The enable/disable is implicit through setting the limit value
               - action: system_log.write
                 data:
                   message: "Sigenergy export power limit enable/disable is implicit through limit value setting"
                   level: info
+          - conditions:
+              - condition: template
+                value_template: "{{ is_state('input_select.inverter_brand', 'foxess') }}"
+            sequence:
+              - condition: template
+                value_template: "{{ states('input_number.inverter_export_power_hardlimit') | int(0) > 0 }}"
+              - condition: template
+                value_template: >-
+                  {{ integration_entities('foxess_ws') | select('match', '^number\.')
+                     | select('search', 'export_limit$') | list | count > 0 }}
+              - action: number.set_value
+                target:
+                  entity_id: >-
+                    {{ integration_entities('foxess_ws') | select('match', '^number\.')
+                       | select('search', 'export_limit$') | list | first }}
+                data:
+                  value: >-
+                    {{ states('input_number.inverter_export_power_limit_input') | int(0)
+                       if is_state('input_boolean.inverter_export_power_limit_enabled_input', 'on')
+                       else states('input_number.inverter_export_power_hardlimit') | int(0) }}
           - conditions:
               - condition: template
                 value_template: "{{ states('input_select.inverter_brand').startswith('goodwe')}}"
