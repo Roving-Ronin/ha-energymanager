@@ -19,6 +19,10 @@ INTEGRATIONS = {
     'zachowj/hass-node-red': 'nodered',
     'bremor/bureau_of_meteorology': 'bureau_of_meteorology',
     'bjreplay/ha-solcast-solar': 'solcast_solar',
+    'lbbrhzn/ocpp': 'ocpp',
+    'mletenay/home-assistant-goodwe-inverter': 'goodwe',
+    'Roving-Ronin/BatteryLedger:' 'battery_ledger',
+    'albuslee/foxess-ws-bridge': 'foxess_ws',
 }
 CATEGORIES = {'integration', 'plugin', 'theme', 'template'}
 
