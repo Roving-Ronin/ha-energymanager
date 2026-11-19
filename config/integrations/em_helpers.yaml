@@ -220,6 +220,7 @@ input_select:
     - goodwe_et
     - goodwe_int
     - alphaess
+    - foxess
     - fronius
     - solaredge
     
