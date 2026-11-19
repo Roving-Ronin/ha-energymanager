@@ -11,6 +11,53 @@ automation:
       - action: solcast_solar.update_forecasts
         data: {}
     mode: single
+
+  - id: foxess_connection_lost
+    alias: "FoxESS: Connection Lost"
+    description: "Notify when the FoxESS WebSocket connection is lost"
+    trigger:
+      - platform: template
+        value_template: >-
+          {% set fox = integration_entities('foxess_ws')
+             | select('match', '^binary_sensor\.')
+             | select('search', '_websocket_connected$')
+             | list | first | default('', true) %}
+          {{ fox != '' and states(fox) in ['off', 'unavailable'] }}
+        for: "00:05:00"
+    condition:
+      - condition: state
+        entity_id: input_select.inverter_brand
+        state: "foxess"
+    action:
+      - action: persistent_notification.create
+        data:
+          title: "FoxESS Connection Lost"
+          message: >
+            The FoxESS WebSocket connection has been unavailable
+            for at least five minutes. Check the FoxESS Cloud
+            integration and network connectivity.
+          notification_id: foxess_inverter_offline
+    mode: single
+  - id: foxess_connection_restored
+    alias: "FoxESS: Connection Restored"
+    description: "Dismiss the FoxESS offline notification on reconnection"
+    trigger:
+      - platform: template
+        value_template: >-
+          {% set fox = integration_entities('foxess_ws')
+             | select('match', '^binary_sensor\.')
+             | select('search', '_websocket_connected$')
+             | list | first | default('', true) %}
+          {{ fox != '' and is_state(fox, 'on') }}
+    condition:
+      - condition: state
+        entity_id: input_select.inverter_brand
+        state: "foxess"
+    action:
+      - action: persistent_notification.dismiss
+        data:
+          notification_id: foxess_inverter_offline
+    mode: single  
   - id: "electricity_5_minute_import_cost_export_price"
     alias: "Electricity: 5 Minute Import Cost & Export Price"
     trigger:
