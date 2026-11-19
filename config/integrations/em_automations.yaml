@@ -62,7 +62,24 @@ automation:
                 target:
                   entity_id: input_number.electricity_import_cost_5_minutes
                 data:
-                  value: "{{ import_kwh_5m * states('sensor.grid_buy_price')|float(0) }}"
+                  value: >-
+                    {% set entity = 'input_number.electricity_import_cost_5_minutes' %}
+                    {% set actual = (import_kwh_5m * states('sensor.grid_buy_price')|float(0)) | float(0) %}
+                    {% set previous = states(entity) | float(0) %}
+                    {% set step = state_attr(entity, 'step') | float(0.001) %}
+                    {% set minimum = state_attr(entity, 'min') | float(0) %}
+                    {% set maximum = state_attr(entity, 'max') | float(100000) %}
+                    {% set interval = (now().hour * 60 + now().minute) // 5 %}
+                    {% set direction = 1 if interval % 2 == 0 else -1 %}
+                    {% set preferred = actual + step * direction %}
+                    {% set alternate = actual - step * direction %}
+                    {% if step > 0 and minimum <= preferred <= maximum and (preferred | round(3)) != (previous | round(3)) %}
+                      {{ preferred }}
+                    {% elif step > 0 and minimum <= alternate <= maximum and (alternate | round(3)) != (previous | round(3)) %}
+                      {{ alternate }}
+                    {% else %}
+                      {{ actual }}
+                    {% endif %}
               - service: input_number.set_value
                 target:
                   entity_id: input_number.electricity_import_cost_total
@@ -72,17 +89,68 @@ automation:
                 target:
                   entity_id: input_number.electricity_export_profit_5_minutes
                 data:
-                  value: "{{ export_kwh_5m * states('sensor.grid_sell_price')|float(0) }}"
+                  value: >-
+                    {% set entity = 'input_number.electricity_export_profit_5_minutes' %}
+                    {% set actual = (export_kwh_5m * states('sensor.grid_sell_price')|float(0)) | float(0) %}
+                    {% set previous = states(entity) | float(0) %}
+                    {% set step = state_attr(entity, 'step') | float(0.001) %}
+                    {% set minimum = state_attr(entity, 'min') | float(0) %}
+                    {% set maximum = state_attr(entity, 'max') | float(100000) %}
+                    {% set interval = (now().hour * 60 + now().minute) // 5 %}
+                    {% set direction = 1 if interval % 2 == 0 else -1 %}
+                    {% set preferred = actual + step * direction %}
+                    {% set alternate = actual - step * direction %}
+                    {% if step > 0 and minimum <= preferred <= maximum and (preferred | round(3)) != (previous | round(3)) %}
+                      {{ preferred }}
+                    {% elif step > 0 and minimum <= alternate <= maximum and (alternate | round(3)) != (previous | round(3)) %}
+                      {{ alternate }}
+                    {% else %}
+                      {{ actual }}
+                    {% endif %}
               - service: input_number.set_value
                 target:
                   entity_id: input_number.inverter_import_energy_5_minutes
                 data:
-                  value: "{{ import_kwh_5m }}"
+                  value: >-
+                    {% set entity = 'input_number.inverter_import_energy_5_minutes' %}
+                    {% set actual = (import_kwh_5m) | float(0) %}
+                    {% set previous = states(entity) | float(0) %}
+                    {% set step = state_attr(entity, 'step') | float(0.001) %}
+                    {% set minimum = state_attr(entity, 'min') | float(0) %}
+                    {% set maximum = state_attr(entity, 'max') | float(100000) %}
+                    {% set interval = (now().hour * 60 + now().minute) // 5 %}
+                    {% set direction = 1 if interval % 2 == 0 else -1 %}
+                    {% set preferred = actual + step * direction %}
+                    {% set alternate = actual - step * direction %}
+                    {% if step > 0 and minimum <= preferred <= maximum and (preferred | round(3)) != (previous | round(3)) %}
+                      {{ preferred }}
+                    {% elif step > 0 and minimum <= alternate <= maximum and (alternate | round(3)) != (previous | round(3)) %}
+                      {{ alternate }}
+                    {% else %}
+                      {{ actual }}
+                    {% endif %}
               - service: input_number.set_value
                 target:
                   entity_id: input_number.inverter_export_energy_5_minutes
                 data:
-                  value: "{{ export_kwh_5m }}"
+                  value: >-
+                    {% set entity = 'input_number.inverter_export_energy_5_minutes' %}
+                    {% set actual = (export_kwh_5m) | float(0) %}
+                    {% set previous = states(entity) | float(0) %}
+                    {% set step = state_attr(entity, 'step') | float(0.001) %}
+                    {% set minimum = state_attr(entity, 'min') | float(0) %}
+                    {% set maximum = state_attr(entity, 'max') | float(100000) %}
+                    {% set interval = (now().hour * 60 + now().minute) // 5 %}
+                    {% set direction = 1 if interval % 2 == 0 else -1 %}
+                    {% set preferred = actual + step * direction %}
+                    {% set alternate = actual - step * direction %}
+                    {% if step > 0 and minimum <= preferred <= maximum and (preferred | round(3)) != (previous | round(3)) %}
+                      {{ preferred }}
+                    {% elif step > 0 and minimum <= alternate <= maximum and (alternate | round(3)) != (previous | round(3)) %}
+                      {{ alternate }}
+                    {% else %}
+                      {{ actual }}
+                    {% endif %}
               - service: input_number.set_value
                 target:
                   entity_id: input_number.prev_imported_energy_total
@@ -144,17 +212,68 @@ automation:
                 target:
                   entity_id: input_number.inverter_import_energy_5_minutes
                 data:
-                  value: "{{ import_kwh_5m }}"
+                  value: >-
+                    {% set entity = 'input_number.inverter_import_energy_5_minutes' %}
+                    {% set actual = (import_kwh_5m) | float(0) %}
+                    {% set previous = states(entity) | float(0) %}
+                    {% set step = state_attr(entity, 'step') | float(0.001) %}
+                    {% set minimum = state_attr(entity, 'min') | float(0) %}
+                    {% set maximum = state_attr(entity, 'max') | float(100000) %}
+                    {% set interval = (now().hour * 60 + now().minute) // 5 %}
+                    {% set direction = 1 if interval % 2 == 0 else -1 %}
+                    {% set preferred = actual + step * direction %}
+                    {% set alternate = actual - step * direction %}
+                    {% if step > 0 and minimum <= preferred <= maximum and (preferred | round(3)) != (previous | round(3)) %}
+                      {{ preferred }}
+                    {% elif step > 0 and minimum <= alternate <= maximum and (alternate | round(3)) != (previous | round(3)) %}
+                      {{ alternate }}
+                    {% else %}
+                      {{ actual }}
+                    {% endif %}
               - service: input_number.set_value
                 target:
                   entity_id: input_number.inverter_export_energy_5_minutes
                 data:
-                  value: "{{ export_kwh_5m }}"
+                  value: >-
+                    {% set entity = 'input_number.inverter_export_energy_5_minutes' %}
+                    {% set actual = (export_kwh_5m) | float(0) %}
+                    {% set previous = states(entity) | float(0) %}
+                    {% set step = state_attr(entity, 'step') | float(0.001) %}
+                    {% set minimum = state_attr(entity, 'min') | float(0) %}
+                    {% set maximum = state_attr(entity, 'max') | float(100000) %}
+                    {% set interval = (now().hour * 60 + now().minute) // 5 %}
+                    {% set direction = 1 if interval % 2 == 0 else -1 %}
+                    {% set preferred = actual + step * direction %}
+                    {% set alternate = actual - step * direction %}
+                    {% if step > 0 and minimum <= preferred <= maximum and (preferred | round(3)) != (previous | round(3)) %}
+                      {{ preferred }}
+                    {% elif step > 0 and minimum <= alternate <= maximum and (alternate | round(3)) != (previous | round(3)) %}
+                      {{ alternate }}
+                    {% else %}
+                      {{ actual }}
+                    {% endif %}
               - service: input_number.set_value
                 target:
                   entity_id: input_number.electricity_import_cost_5_minutes
                 data:
-                  value: "{{ import_kwh_5m * (buy_price/100) }}"
+                  value: >-
+                    {% set entity = 'input_number.electricity_import_cost_5_minutes' %}
+                    {% set actual = (import_kwh_5m * (buy_price/100)) | float(0) %}
+                    {% set previous = states(entity) | float(0) %}
+                    {% set step = state_attr(entity, 'step') | float(0.001) %}
+                    {% set minimum = state_attr(entity, 'min') | float(0) %}
+                    {% set maximum = state_attr(entity, 'max') | float(100000) %}
+                    {% set interval = (now().hour * 60 + now().minute) // 5 %}
+                    {% set direction = 1 if interval % 2 == 0 else -1 %}
+                    {% set preferred = actual + step * direction %}
+                    {% set alternate = actual - step * direction %}
+                    {% if step > 0 and minimum <= preferred <= maximum and (preferred | round(3)) != (previous | round(3)) %}
+                      {{ preferred }}
+                    {% elif step > 0 and minimum <= alternate <= maximum and (alternate | round(3)) != (previous | round(3)) %}
+                      {{ alternate }}
+                    {% else %}
+                      {{ actual }}
+                    {% endif %}
               - service: input_number.set_value
                 target:
                   entity_id: input_number.electricity_import_cost_total
@@ -164,7 +283,24 @@ automation:
                 target:
                   entity_id: input_number.electricity_export_profit_5_minutes
                 data:
-                  value: "{{ export_kwh_5m * (sell_price/100) }}"
+                  value: >-
+                    {% set entity = 'input_number.electricity_export_profit_5_minutes' %}
+                    {% set actual = (export_kwh_5m * (sell_price/100)) | float(0) %}
+                    {% set previous = states(entity) | float(0) %}
+                    {% set step = state_attr(entity, 'step') | float(0.001) %}
+                    {% set minimum = state_attr(entity, 'min') | float(0) %}
+                    {% set maximum = state_attr(entity, 'max') | float(100000) %}
+                    {% set interval = (now().hour * 60 + now().minute) // 5 %}
+                    {% set direction = 1 if interval % 2 == 0 else -1 %}
+                    {% set preferred = actual + step * direction %}
+                    {% set alternate = actual - step * direction %}
+                    {% if step > 0 and minimum <= preferred <= maximum and (preferred | round(3)) != (previous | round(3)) %}
+                      {{ preferred }}
+                    {% elif step > 0 and minimum <= alternate <= maximum and (alternate | round(3)) != (previous | round(3)) %}
+                      {{ alternate }}
+                    {% else %}
+                      {{ actual }}
+                    {% endif %}
               - service: input_number.set_value
                 target:
                   entity_id: input_number.prev_imported_energy_total
@@ -249,17 +385,68 @@ automation:
                 target:
                   entity_id: input_number.inverter_import_energy_5_minutes
                 data:
-                  value: "{{ import_kwh_5m }}"
+                  value: >-
+                    {% set entity = 'input_number.inverter_import_energy_5_minutes' %}
+                    {% set actual = (import_kwh_5m) | float(0) %}
+                    {% set previous = states(entity) | float(0) %}
+                    {% set step = state_attr(entity, 'step') | float(0.001) %}
+                    {% set minimum = state_attr(entity, 'min') | float(0) %}
+                    {% set maximum = state_attr(entity, 'max') | float(100000) %}
+                    {% set interval = (now().hour * 60 + now().minute) // 5 %}
+                    {% set direction = 1 if interval % 2 == 0 else -1 %}
+                    {% set preferred = actual + step * direction %}
+                    {% set alternate = actual - step * direction %}
+                    {% if step > 0 and minimum <= preferred <= maximum and (preferred | round(3)) != (previous | round(3)) %}
+                      {{ preferred }}
+                    {% elif step > 0 and minimum <= alternate <= maximum and (alternate | round(3)) != (previous | round(3)) %}
+                      {{ alternate }}
+                    {% else %}
+                      {{ actual }}
+                    {% endif %}
               - service: input_number.set_value
                 target:
                   entity_id: input_number.inverter_export_energy_5_minutes
                 data:
-                  value: "{{ export_kwh_5m }}"
+                  value: >-
+                    {% set entity = 'input_number.inverter_export_energy_5_minutes' %}
+                    {% set actual = (export_kwh_5m) | float(0) %}
+                    {% set previous = states(entity) | float(0) %}
+                    {% set step = state_attr(entity, 'step') | float(0.001) %}
+                    {% set minimum = state_attr(entity, 'min') | float(0) %}
+                    {% set maximum = state_attr(entity, 'max') | float(100000) %}
+                    {% set interval = (now().hour * 60 + now().minute) // 5 %}
+                    {% set direction = 1 if interval % 2 == 0 else -1 %}
+                    {% set preferred = actual + step * direction %}
+                    {% set alternate = actual - step * direction %}
+                    {% if step > 0 and minimum <= preferred <= maximum and (preferred | round(3)) != (previous | round(3)) %}
+                      {{ preferred }}
+                    {% elif step > 0 and minimum <= alternate <= maximum and (alternate | round(3)) != (previous | round(3)) %}
+                      {{ alternate }}
+                    {% else %}
+                      {{ actual }}
+                    {% endif %}
               - service: input_number.set_value
                 target:
                   entity_id: input_number.electricity_import_cost_5_minutes
                 data:
-                  value: "{{ import_kwh_5m * buy_price / 100}}"
+                  value: >-
+                    {% set entity = 'input_number.electricity_import_cost_5_minutes' %}
+                    {% set actual = (import_kwh_5m * buy_price / 100) | float(0) %}
+                    {% set previous = states(entity) | float(0) %}
+                    {% set step = state_attr(entity, 'step') | float(0.001) %}
+                    {% set minimum = state_attr(entity, 'min') | float(0) %}
+                    {% set maximum = state_attr(entity, 'max') | float(100000) %}
+                    {% set interval = (now().hour * 60 + now().minute) // 5 %}
+                    {% set direction = 1 if interval % 2 == 0 else -1 %}
+                    {% set preferred = actual + step * direction %}
+                    {% set alternate = actual - step * direction %}
+                    {% if step > 0 and minimum <= preferred <= maximum and (preferred | round(3)) != (previous | round(3)) %}
+                      {{ preferred }}
+                    {% elif step > 0 and minimum <= alternate <= maximum and (alternate | round(3)) != (previous | round(3)) %}
+                      {{ alternate }}
+                    {% else %}
+                      {{ actual }}
+                    {% endif %}
               - service: input_number.set_value
                 target:
                   entity_id: input_number.electricity_import_cost_total
@@ -269,7 +456,24 @@ automation:
                 target:
                   entity_id: input_number.electricity_export_profit_5_minutes
                 data:
-                  value: "{{ export_kwh_5m * sell_price / 100}}"
+                  value: >-
+                    {% set entity = 'input_number.electricity_export_profit_5_minutes' %}
+                    {% set actual = (export_kwh_5m * sell_price / 100) | float(0) %}
+                    {% set previous = states(entity) | float(0) %}
+                    {% set step = state_attr(entity, 'step') | float(0.001) %}
+                    {% set minimum = state_attr(entity, 'min') | float(0) %}
+                    {% set maximum = state_attr(entity, 'max') | float(100000) %}
+                    {% set interval = (now().hour * 60 + now().minute) // 5 %}
+                    {% set direction = 1 if interval % 2 == 0 else -1 %}
+                    {% set preferred = actual + step * direction %}
+                    {% set alternate = actual - step * direction %}
+                    {% if step > 0 and minimum <= preferred <= maximum and (preferred | round(3)) != (previous | round(3)) %}
+                      {{ preferred }}
+                    {% elif step > 0 and minimum <= alternate <= maximum and (alternate | round(3)) != (previous | round(3)) %}
+                      {{ alternate }}
+                    {% else %}
+                      {{ actual }}
+                    {% endif %}
               - service: input_number.set_value
                 target:
                   entity_id: input_number.prev_imported_energy_total
@@ -563,17 +767,68 @@ automation:
                 target:
                   entity_id: input_number.inverter_import_energy_5_minutes
                 data:
-                  value: "{{ import_kwh_5m }}"
+                  value: >-
+                    {% set entity = 'input_number.inverter_import_energy_5_minutes' %}
+                    {% set actual = (import_kwh_5m) | float(0) %}
+                    {% set previous = states(entity) | float(0) %}
+                    {% set step = state_attr(entity, 'step') | float(0.001) %}
+                    {% set minimum = state_attr(entity, 'min') | float(0) %}
+                    {% set maximum = state_attr(entity, 'max') | float(100000) %}
+                    {% set interval = (now().hour * 60 + now().minute) // 5 %}
+                    {% set direction = 1 if interval % 2 == 0 else -1 %}
+                    {% set preferred = actual + step * direction %}
+                    {% set alternate = actual - step * direction %}
+                    {% if step > 0 and minimum <= preferred <= maximum and (preferred | round(3)) != (previous | round(3)) %}
+                      {{ preferred }}
+                    {% elif step > 0 and minimum <= alternate <= maximum and (alternate | round(3)) != (previous | round(3)) %}
+                      {{ alternate }}
+                    {% else %}
+                      {{ actual }}
+                    {% endif %}
               - service: input_number.set_value
                 target:
                   entity_id: input_number.inverter_export_energy_5_minutes
                 data:
-                  value: "{{ export_kwh_5m }}"
+                  value: >-
+                    {% set entity = 'input_number.inverter_export_energy_5_minutes' %}
+                    {% set actual = (export_kwh_5m) | float(0) %}
+                    {% set previous = states(entity) | float(0) %}
+                    {% set step = state_attr(entity, 'step') | float(0.001) %}
+                    {% set minimum = state_attr(entity, 'min') | float(0) %}
+                    {% set maximum = state_attr(entity, 'max') | float(100000) %}
+                    {% set interval = (now().hour * 60 + now().minute) // 5 %}
+                    {% set direction = 1 if interval % 2 == 0 else -1 %}
+                    {% set preferred = actual + step * direction %}
+                    {% set alternate = actual - step * direction %}
+                    {% if step > 0 and minimum <= preferred <= maximum and (preferred | round(3)) != (previous | round(3)) %}
+                      {{ preferred }}
+                    {% elif step > 0 and minimum <= alternate <= maximum and (alternate | round(3)) != (previous | round(3)) %}
+                      {{ alternate }}
+                    {% else %}
+                      {{ actual }}
+                    {% endif %}
               - service: input_number.set_value
                 target:
                   entity_id: input_number.electricity_import_cost_5_minutes
                 data:
-                  value: "{{ import_kwh_5m * (buy_price) }}"
+                  value: >-
+                    {% set entity = 'input_number.electricity_import_cost_5_minutes' %}
+                    {% set actual = (import_kwh_5m * (buy_price)) | float(0) %}
+                    {% set previous = states(entity) | float(0) %}
+                    {% set step = state_attr(entity, 'step') | float(0.001) %}
+                    {% set minimum = state_attr(entity, 'min') | float(0) %}
+                    {% set maximum = state_attr(entity, 'max') | float(100000) %}
+                    {% set interval = (now().hour * 60 + now().minute) // 5 %}
+                    {% set direction = 1 if interval % 2 == 0 else -1 %}
+                    {% set preferred = actual + step * direction %}
+                    {% set alternate = actual - step * direction %}
+                    {% if step > 0 and minimum <= preferred <= maximum and (preferred | round(3)) != (previous | round(3)) %}
+                      {{ preferred }}
+                    {% elif step > 0 and minimum <= alternate <= maximum and (alternate | round(3)) != (previous | round(3)) %}
+                      {{ alternate }}
+                    {% else %}
+                      {{ actual }}
+                    {% endif %}
               - service: input_number.set_value
                 target:
                   entity_id: input_number.electricity_import_cost_total
@@ -584,7 +839,24 @@ automation:
                 target:
                   entity_id: input_number.electricity_export_profit_5_minutes
                 data:
-                  value: "{{ export_kwh_5m * (sell_price) }}"
+                  value: >-
+                    {% set entity = 'input_number.electricity_export_profit_5_minutes' %}
+                    {% set actual = (export_kwh_5m * (sell_price)) | float(0) %}
+                    {% set previous = states(entity) | float(0) %}
+                    {% set step = state_attr(entity, 'step') | float(0.001) %}
+                    {% set minimum = state_attr(entity, 'min') | float(0) %}
+                    {% set maximum = state_attr(entity, 'max') | float(100000) %}
+                    {% set interval = (now().hour * 60 + now().minute) // 5 %}
+                    {% set direction = 1 if interval % 2 == 0 else -1 %}
+                    {% set preferred = actual + step * direction %}
+                    {% set alternate = actual - step * direction %}
+                    {% if step > 0 and minimum <= preferred <= maximum and (preferred | round(3)) != (previous | round(3)) %}
+                      {{ preferred }}
+                    {% elif step > 0 and minimum <= alternate <= maximum and (alternate | round(3)) != (previous | round(3)) %}
+                      {{ alternate }}
+                    {% else %}
+                      {{ actual }}
+                    {% endif %}
               - service: input_number.set_value
                 target:
                   entity_id: input_number.prev_imported_energy_total
