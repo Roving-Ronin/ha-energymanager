@@ -21,7 +21,7 @@ INTEGRATIONS = {
     'bjreplay/ha-solcast-solar': 'solcast_solar',
     'lbbrhzn/ocpp': 'ocpp',
     'mletenay/home-assistant-goodwe-inverter': 'goodwe',
-    'Roving-Ronin/BatteryLedger:' 'battery_ledger',
+    'Roving-Ronin/BatteryLedger': 'battery_ledger',
     'albuslee/foxess-ws-bridge': 'foxess_ws',
 }
 CATEGORIES = {'integration', 'plugin', 'theme', 'template'}
