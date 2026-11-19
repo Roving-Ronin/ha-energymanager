@@ -1,4 +1,4 @@
-# === ENERGY_MANAGER_GROUPS_START v1.3.0 ===
+# === ENERGY_MANAGER_GROUPS_START v2.1.0 ===
 group:
   inverter_management:
     name: "Inverter Management"
@@ -9,6 +9,7 @@ group:
       - binary_sensor.sungrow_active
       - binary_sensor.sigenergy_active
       - binary_sensor.alphaess_active
+      - binary_sensor.foxess_active
       - binary_sensor.fronius_active
       - binary_sensor.goodwe_active
       - binary_sensor.goodwe_et_active
@@ -19,6 +20,7 @@ group:
       - script.manual_activate_sungrow
       - script.manual_activate_sigenergy
       - script.manual_activate_alphaess
+      - script.manual_activate_foxess
       - script.manual_activate_fronius
       - script.manual_activate_goodwe
       - script.manual_activate_goodwe_et
