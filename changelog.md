@@ -1,9 +1,10 @@
 # Changelog
 
 <details open>
-<summary><strong>2.0.1- 2026-11-xx</strong></summary>
+<summary><strong>2.1.0 - 2026-12-xx</strong></summary>
 
 ### Added
+* FoxESS Support
 * PV Dashboard update
   * Profiles have been replaced with tabs
   * Up to eight tabs can be created for different views
