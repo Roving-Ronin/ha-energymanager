@@ -73,7 +73,7 @@ Whether you're taking advantage of wholesale electricity prices, free daytime im
 
 Energy Manager works with a range of solar and battery systems and electricity pricing arrangements.
 
-Depending on your setup, these may include equipment from **Sungrow, Sigenergy, AlphaESS, GoodWe, Fronius and SolarEdge**, and tariffs from **Amber Electric, LocalVolts, Flow Power, GloBird and many other providers**.
+Depending on your setup, these may include equipment from **Sungrow, Sigenergy, AlphaESS, GoodWe, FoxESS, Fronius and SolarEdge**, and tariffs from **Amber Electric, LocalVolts, Flow Power, GloBird and many other providers**.
 
 Many electricity plans can be configured using custom import rates, export tariffs, free electricity periods and time-of-use schedules.
 
