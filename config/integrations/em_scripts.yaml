@@ -2333,12 +2333,44 @@ script:
           notification_id: "shell_test"
   publish_inverter_data:
     alias: "Publish Inverter Data to MQTT"
-    description: "Reads modbus data and publishes to MQTT every 10 seconds"
+    description: "Reads inverter data and publishes to MQTT every 10 seconds"
     sequence:
       - variables:
           brand: "{{ states('input_select.inverter_brand') }}"
+          fox_solar: >-
+            {{ (integration_entities('foxess_ws') | select('match', '^sensor\.')
+                | select('search', '_solar_power$') | list | first | default('', true))
+                if is_state('input_select.inverter_brand', 'foxess') else '' }}
+          fox_grid: >-
+            {{ (integration_entities('foxess_ws') | select('match', '^sensor\.')
+                | select('search', '_grid_power$') | list | first | default('', true))
+                if is_state('input_select.inverter_brand', 'foxess') else '' }}
+          fox_battery: >-
+            {{ (integration_entities('foxess_ws') | select('match', '^sensor\.')
+                | select('search', '_battery_power$') | list | first | default('', true))
+                if is_state('input_select.inverter_brand', 'foxess') else '' }}
+          fox_soc: >-
+            {{ (integration_entities('foxess_ws') | select('match', '^sensor\.')
+                | select('search', '_battery_soc$') | list | first | default('', true))
+                if is_state('input_select.inverter_brand', 'foxess') else '' }}
+          fox_load: >-
+            {{ (integration_entities('foxess_ws') | select('match', '^sensor\.')
+                | select('search', '_load_power$') | list | first | default('', true))
+                if is_state('input_select.inverter_brand', 'foxess') else '' }}
+          fox_mode: >-
+            {{ (integration_entities('foxess_ws') | select('match', '^select\.')
+                | select('search', '_work_mode$') | list | first | default('', true))
+                if is_state('input_select.inverter_brand', 'foxess') else '' }}
+          fox_min_soc: >-
+            {{ (integration_entities('foxess_ws') | select('match', '^number\.')
+                | select('search', '_min_soc_on_grid$') | list | first | default('', true))
+                if is_state('input_select.inverter_brand', 'foxess') else '' }}
+          fox_export_limit: >-
+            {{ (integration_entities('foxess_ws') | select('match', '^number\.')
+                | select('search', '_export_limit$') | list | first | default('', true))
+                if is_state('input_select.inverter_brand', 'foxess') else '' }}
       - condition: template
-        value_template: "{{ brand in ['sungrow', 'sigenergy', 'alphaess', 'goodwe', 'goodwe_et', 'goodwe_int', 'fronius', 'solaredge'] }}"
+        value_template: "{{ brand in ['sungrow', 'sigenergy', 'alphaess', 'goodwe', 'goodwe_et', 'goodwe_int', 'foxess', 'fronius', 'solaredge'] }}"
       - action: mqtt.publish
         data:
           topic: "homeassistant/sensor/inverter/pv_power/state"
@@ -2377,6 +2409,8 @@ script:
               {% set batt = states('sensor.solaredge_battery_power') | float(0) %}
               {% set real_ap = ap * (10 ** ap_sf) %}
               {{ (real_ap + batt  + additional) | round(0) }}
+            {% elif brand == 'foxess' %}
+              {{ ((states(fox_solar) | float(0)) + additional) | round(0) if has_value(fox_solar) else 'unknown' }}
             {% else %}
               {{ additional | round(0) }}
             {% endif %}
@@ -2412,6 +2446,8 @@ script:
             {% elif brand == 'solaredge' %}
               {{ states('sensor.solaredge_meter_power') | float(0)
                  * (10 ** (states('sensor.solaredge_meter_power_sf') | int(0))) }}
+            {% elif brand == 'foxess' %}
+              {{ states(fox_grid) | float(0) if has_value(fox_grid) else 'unknown' }}
             {% endif %}
           retain: true
       - action: mqtt.publish
@@ -2436,6 +2472,8 @@ script:
               {{ states('sensor.fronius_battery_power') | float(0) }}
             {% elif brand == 'solaredge' %}
               {{ states('sensor.solaredge_battery_power') | float(0) }}
+            {% elif brand == 'foxess' %}
+              {{ states(fox_battery) | float(0) if has_value(fox_battery) else 'unknown' }}
             {% endif %}
           retain: true
       - variables:
@@ -2474,6 +2512,8 @@ script:
               {% set batt = states('sensor.solaredge_battery_power') | float(0) %}
               {% set real_ap = ap * (10 ** ap_sf) %}
               {{ (real_ap + batt + additional) | round(0) }}
+            {% elif brand == 'foxess' %}
+              {{ ((states(fox_solar) | float(0)) + additional) | round(0) if has_value(fox_solar) else 'unknown' }}
             {% else %}
               {{ additional | round(0) }}
             {% endif %}
@@ -2497,6 +2537,8 @@ script:
             {% elif brand == 'solaredge' %}
               {{ states('sensor.solaredge_meter_power') | float(0)
                  * (10 ** (states('sensor.solaredge_meter_power_sf') | int(0))) }}
+            {% elif brand == 'foxess' %}
+              {{ states(fox_grid) | float(0) if has_value(fox_grid) else 'unknown' }}
             {% endif %}
           battery_power: >
             {% if brand == 'sungrow' %}
@@ -2517,6 +2559,8 @@ script:
               {{ states('sensor.fronius_battery_power') | float(0) }}
             {% elif brand == 'solaredge' %}
               {{ states('sensor.solaredge_battery_power') | float(0) }}
+            {% elif brand == 'foxess' %}
+              {{ states(fox_battery) | float(0) if has_value(fox_battery) else 'unknown' }}
             {% endif %}
       - action: mqtt.publish
         data:
@@ -2572,6 +2616,8 @@ script:
               {{ (((inv_power_raw * (10 ** sf_inv)) + additional)
                   - (grid_power_raw * (10 ** sf_grid))
                   + ev_to_add) | round(0) }}
+            {% elif brand == 'foxess' %}
+              {{ (states(fox_load) | float(0) + ev_to_add) | round(0) if has_value(fox_load) else 'unknown' }}
             {% else %}
               0
             {% endif %}
@@ -2613,6 +2659,8 @@ script:
                  * (10 ** sf) %}
               {% set net_grid = -grid_power + ev_w %}
               {{ max(0, net_grid) | round(0) }}
+            {% elif brand == 'foxess' %}
+              {{ ([states(fox_grid) | float(0) + ev_w, 0] | max) | round(0) if has_value(fox_grid) else 'unknown' }}
             {% else %}
               0
             {% endif %}
@@ -2654,6 +2702,8 @@ script:
               {% set grid_power = grid_raw * (10 ** sf) %}
               {% set net_grid = -grid_power + ev_w %}
               {{ max(0, -net_grid) | round(0) }}
+            {% elif brand == 'foxess' %}
+              {{ ([0 - (states(fox_grid) | float(0)) - ev_w, 0] | max) | round(0) if has_value(fox_grid) else 'unknown' }}
             {% else %}
               0
             {% endif %}
@@ -2677,6 +2727,8 @@ script:
             {% elif brand == 'solaredge' %}
               {% set battery_power = states('sensor.solaredge_battery_power') | float(0) %}
               {{ max(0, battery_power) }}
+            {% elif brand == 'foxess' %}
+              {{ ([states(fox_battery) | float(0), 0] | max) | round(0) if has_value(fox_battery) else 'unknown' }}
             {% endif %}
           retain: true
       - action: mqtt.publish
@@ -2698,6 +2750,8 @@ script:
             {% elif brand == 'solaredge' %}
               {% set battery_power = states('sensor.solaredge_battery_power') | float(0) %}
               {{ max(0, -battery_power) }}
+            {% elif brand == 'foxess' %}
+              {{ ([0 - (states(fox_battery) | float(0)), 0] | max) | round(0) if has_value(fox_battery) else 'unknown' }}
             {% endif %}
           retain: true
       # Publish Battery Data
@@ -2724,6 +2778,8 @@ script:
               {{ (states('sensor.fronius_battery_soc') | float(0) * (10 ** sf)) | round(2) }}
             {% elif brand == 'solaredge' %}
               {{ states('sensor.solaredge_battery_soe') | float(0) }}
+            {% elif brand == 'foxess' %}
+              {{ states(fox_soc) | float(0) if has_value(fox_soc) else 'unknown' }}
             {% endif %}
           retain: true
       - action: mqtt.publish
@@ -2749,6 +2805,8 @@ script:
               {{ ((states('sensor.fronius_battery_capacity') | float(0) / 1000) * (10 ** sf)) }}
             {% elif brand == 'solaredge' %}
               {{ states('sensor.solaredge_battery_max_energy') | float(0) }}
+            {% elif brand == 'foxess' %}
+              {{ states('input_number.battery_capacity') | float(0) if has_value('input_number.battery_capacity') else 'unknown' }}
             {% endif %}
           retain: true
       - action: mqtt.publish
@@ -2774,7 +2832,6 @@ script:
             {% elif brand == 'solaredge' %}
               {{ states('sensor.solaredge_battery_soh') | float(0) }}
             {% endif %}
-          # Fronius does not support SOH through their modbus implementation
           retain: true
       - action: mqtt.publish
         data:
@@ -2841,6 +2898,8 @@ script:
               {{ (states('sensor.fronius_battery_soc') | float(0) * (10 ** sf)) }}
             {% elif brand == 'solaredge' %}
               {{ states('sensor.solaredge_battery_soe') | float(0) }}
+            {% elif brand == 'foxess' %}
+              {{ states(fox_soc) | float(0) if has_value(fox_soc) else 'unknown' }}
             {% endif %}
           capacity: >
             {% if brand == 'sungrow' %}
@@ -2856,6 +2915,8 @@ script:
               {{ (states('sensor.fronius_battery_capacity') | float(0) * (10 ** sf)) }}
             {% elif brand == 'solaredge' %}
               {{ states('sensor.solaredge_battery_max_energy') | float(0) }}
+            {% elif brand == 'foxess' %}
+              {{ states('input_number.battery_capacity') | float(0) if has_value('input_number.battery_capacity') else 'unknown' }}
             {% endif %}
       - action: mqtt.publish
         data:
@@ -2873,6 +2934,8 @@ script:
               {{ (soc | float * capacity | float / 100000 ) | round(2) }}
             {% elif brand == 'solaredge' %}
               {{ (soc | float * capacity | float / 100000) | round(2) }}
+            {% elif brand == 'foxess' %}
+              {{ ((soc | float(0)) * (capacity | float(0)) / 100) | round(2) if (is_number(soc) and is_number(capacity) and capacity | float(0) > 0) else 'unknown' }}
             {% endif %}
           retain: true
       # Publish Energy Data (Daily)
@@ -2888,12 +2951,8 @@ script:
               {{ states('sensor.alphaess_battery_charge_energy') | float(0) }}
             {% elif brand in ['goodwe', 'goodwe_et', 'goodwe_int'] %}
               {{ states('sensor.today_battery_charge') | float(0) }}
-            {% elif brand == 'fronius' %}
-              0
             {% endif %}
           retain: true
-          # Fronius does not track daily battery charge
-          # SolarEdge does not track daily battery charge
       - action: mqtt.publish
         data:
           topic: "homeassistant/sensor/inverter/daily_battery_discharge/state"
@@ -2912,12 +2971,8 @@ script:
               {% else %}
                 0
               {% endif %}
-            {% elif brand == 'fronius' %}
-              0
             {% endif %}
           retain: true
-          # Fronius does not track daily battery discharge
-          # SolarEdge does not track daily battery discharge
       # Publish Energy Data (Total)
       - action: mqtt.publish
         data:
@@ -2935,7 +2990,6 @@ script:
               {% set sf = states('sensor.fronius_dcpower_sf') | float(0) %}
               {{ (( states('sensor.fronius_total_charge_energy') | float(0) / 1000) * (10 ** sf)) }}
             {% endif %}
-          # SolarEdge does not track total battery charge
           retain: true
       - action: mqtt.publish
         data:
@@ -2959,7 +3013,6 @@ script:
               {% set sf = states('sensor.fronius_battery_charge_rate_sf') | float(0) %}
               {{ ((states('sensor.fronius_total_discharge_energy') | float(0) / 1000) * (10 ** sf)) }}
             {% endif %}
-          # SolarEdge does not track total battery discharge
           retain: true
       - action: mqtt.publish
         data:
@@ -2986,7 +3039,6 @@ script:
               {{ states('sensor.solaredge_total_pv_energy') | float(0) }}
             {% endif %}
           retain: true
-          # Goodwe does not track total generated energy
       - action: mqtt.publish
         data:
           topic: "homeassistant/sensor/inverter/daily_pv_generation/state"
@@ -3005,10 +3057,7 @@ script:
               {% else %}
                 0
               {% endif %}
-            {% elif brand == 'fronius' %}
-              0
             {% endif %}
-          # SolarEdge does not support daily pv generation total
           retain: true
       - action: mqtt.publish
         data:
@@ -3026,6 +3075,8 @@ script:
               {{ states('sensor.sensor.fronius_inverter_model') | string }}
             {% elif brand == 'solaredege' %}
               {{ states('sensor.solaredge_device_model') | string }}
+            {% elif brand == 'foxess' %}
+              FoxESS (cloud)
             {% endif %}
           retain: true
       - action: mqtt.publish
@@ -3044,6 +3095,8 @@ script:
               {{ states('sensor.fronius_inverter_serial') | string }}
             {% elif brand == 'solaredge' %}
               {{ states('sensor.solaredge_inverter_serial_number') | string }}
+            {% elif brand == 'foxess' %}
+              {{ device_attr(fox_solar, 'serial_number') | default('unknown', true) if fox_solar else 'unknown' }}
             {% endif %}
           retain: true
       - action: mqtt.publish
@@ -3082,8 +3135,9 @@ script:
               {% endif %}
             {% elif brand == 'fronius' %}
               {{ states('sensor.fronius_ems_mode') | string }}
+            {% elif brand == 'foxess' %}
+              {{ states(fox_mode) if has_value(fox_mode) else 'unknown' }}
             {% endif %}
-          # SolarEdge does not support the EMS Mode description
           retain: true
       - action: mqtt.publish
         data:
@@ -3106,6 +3160,8 @@ script:
               {% else %}
                 {{ v }}
               {% endif %}
+            {% elif brand == 'foxess' %}
+              {{ states(fox_mode) if has_value(fox_mode) else 'unknown' }}
             {% endif %}
           retain: true
       # Publish Current Control Settings (from input helpers - user adjustable)
@@ -3166,6 +3222,8 @@ script:
               {{ (states('sensor.fronius_reserved_soc_backup') | float(0) * (10 ** sf)) }}
             {% elif brand == 'solaredge' %}
               {{ states('sensor.solaredge_reserved_soc') | float(0) }}
+            {% elif brand == 'foxess' %}
+              {{ states(fox_min_soc) | float(0) if has_value(fox_min_soc) else 'unknown' }}
             {% endif %}
           retain: true
           # Goodwe has no min or max SoC, just a target
@@ -3183,11 +3241,10 @@ script:
               100
             {% elif brand == 'solaredge' %}
               100
+            {% elif brand == 'foxess' %}
+              100
             {% endif %}
           retain: true
-          # Fronius does not support a max soc modbus setting
-          # Goodwe has no min or max SoC, just a target
-          # SolarEdge has no min or max SoC, only SoE
       - action: mqtt.publish
         data:
           topic: "homeassistant/sensor/inverter/current_charge_discharge_power/state"
@@ -3222,7 +3279,6 @@ script:
               {{ states('sensor.solaredge_reserved_soc') | float(0) }}
             {% endif %}
           retain: true
-          # Goodwe, not supported
       - action: mqtt.publish
         data:
           topic: "homeassistant/sensor/inverter/current_max_charge_power/state"
@@ -3305,6 +3361,8 @@ script:
               {{ (states('sensor.fronius_export_power_limit') | float(0) * (10 ** sf)) }}
             {% elif brand == 'solaredge' %}
               {{ states('sensor.solaredge_export_power_limit') | float(0) }}
+            {% elif brand == 'foxess' %}
+              {{ states(fox_export_limit) | float(0) if has_value(fox_export_limit) else 'unknown' }}
             {% endif %}
           retain: true
       - action: mqtt.publish
@@ -3323,8 +3381,10 @@ script:
               {{ states('sensor.fronius_export_power_limit_enabled') | string }}
             {% elif brand == 'solaredge' %}
                 true
+            {% elif brand == 'foxess' %}
+              true
             {% endif %}
-          retain: true
+          retain: true        
   manual_activate_sungrow:
     alias: "Manual Activate Sungrow"
     icon: mdi:solar-power
