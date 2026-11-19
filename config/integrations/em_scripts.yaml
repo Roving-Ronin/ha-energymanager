@@ -164,8 +164,7 @@ script:
   foxess_apply_ems_schedule:
     alias: "FoxESS: Apply Energy Manager Schedule"
     description: "Apply a rolling 10-minute FoxESS charge/discharge window"
-    mode: queued
-    max: 3
+    mode: restart
     fields:
       requested_mode:
         description: "Optional override from set_inverter_charge_discharge_mode"
@@ -179,6 +178,8 @@ script:
           fox_start: "{{ now() - timedelta(minutes=1) if now().hour or now().minute else now() }}"
           fox_end: >-
             {{ [now() + timedelta(minutes=9), today_at('23:59:00')] | min }}
+          fox_window_valid: >-
+            {{ now() < today_at('23:59:00') }}
           fox_min_soc: "{{ states('input_number.inverter_min_soc') | int(10) }}"
           fox_max_soc: "{{ states('input_number.inverter_max_soc') | int(100) }}"
           fox_charge_cap: >-
@@ -200,7 +201,10 @@ script:
       - choose:
           - conditions:
               - condition: template
-                value_template: "{{ fox_mode in ['Forced Charge', 'Forced Discharge'] and fox_power | int(0) > 0 }}"
+                value_template: >-
+                  {{ fox_mode in ['Forced Charge', 'Forced Discharge']
+                     and fox_power | int(0) > 0
+                     and fox_window_valid | bool(false) }}
             sequence:
               - action: foxess_ws.set_scheduler
                 data:
