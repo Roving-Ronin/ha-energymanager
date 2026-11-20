@@ -534,9 +534,7 @@ def get_entity_state(entity_id):
 
 def handle_special_files(manifest):
     try:
-        modbus_files = ['alphaess_modbus.yaml.disabled', 'fronius_modbus.yaml.disabled', 
-                        'sigenergy_modbus.yaml.disabled', 'sungrow_modbus.yaml.disabled',
-                        'goodwe_modbus.yaml.disabled', 'solaredge_modbus.yaml.disaled']
+        modbus_files = ['alphaess_modbus.yaml.disabled', 'foxess_modbus.yaml.disabled', 'fronius_modbus.yaml.disabled', 'sigenergy_modbus.yaml.disabled', 'sungrow_modbus.yaml.disabled', 'goodwe_modbus.yaml.disabled', 'solaredge_modbus.yaml.disaled']
         
         updated_modbus_files = [f for f in modbus_files if f in manifest.get('files', {})]
         
@@ -551,6 +549,7 @@ def handle_special_files(manifest):
                     'sungrow':   'sungrow_modbus.yaml.disabled',
                     'sigenergy': 'sigenergy_modbus.yaml.disabled',
                     'alphaess':  'alphaess_modbus.yaml.disabled',
+                    'foxess':   'foxess_modbus.yaml.disabled',
                     'fronius':   'fronius_modbus.yaml.disabled',
                     'goodwe':    'goodwe_modbus.yaml.disabled',
                     'goodwe_et': 'goodwe_modbus.yaml.disabled',
