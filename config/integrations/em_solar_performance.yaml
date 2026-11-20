@@ -9,7 +9,7 @@ template:
       plan_entity: sensor.energy_manager_plan
       # Optional binary sensors. 'on' means curtailed or offline, respectively.
       # With no curtailment sensor, use Energy Manager's current curtailment flag.
-      curtailment_entity: input_boolean.curtailing_active
+      curtailment_entity: null # input_boolean.curtailing_active
       inverter_offline_entity: null
       # Local time on a five-minute boundary.
       snapshot_time: "03:55:00"
