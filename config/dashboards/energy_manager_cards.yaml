@@ -212,6 +212,26 @@
     em_name: AEMO Price
     em_column: 0
     em_order: 3
+- type: custom:em-battery-bar-card
+  entity: sensor.inverter_battery_level
+  title: Battery Level
+  segments: 25
+  height: 35
+  view_layout:
+    em_id: battery-bar-card
+    em_width: 12
+    em_name: Battery Level Bar
+    em_column: 0
+    em_order: 4
+- type: custom:em-battery-outlook-card
+  battery_capacity_entity: input_number.battery_capacity
+  view_layout:
+    em_id: em-battery-outlook
+    em_name: Battery Outlook
+    em_width: 12
+    em_column: 0
+    em_order: 5
+  title: Battery Outlook 
 - type: markdown
   content: >
     {% if is_state('switch.energy_control_on_off', 'on') %}
@@ -345,7 +365,7 @@
     em_width: 12
     em_name: Energy Manager Decision
     em_column: 0
-    em_order: 4
+    em_order: 6
     em_required: true
 - type: conditional
   conditions:
@@ -365,7 +385,7 @@
     em_width: 12
     em_name: EV Charging Decision
     em_column: 0
-    em_order: 5
+    em_order: 7
     em_required: true
 - show_name: true
   show_icon: true
@@ -384,7 +404,7 @@
     em_width: 4
     em_name: Energy Control Switch
     em_column: 0
-    em_order: 6
+    em_order: 8
     em_required: true
 - type: conditional
   grid_options:
@@ -406,7 +426,7 @@
     em_width: 4
     em_name: High Sell Price Mode
     em_column: 0
-    em_order: 8
+    em_order: 9
 - type: conditional
   grid_options:
     columns: 4
@@ -427,7 +447,7 @@
     em_width: 4
     em_name: Sell/Buy Mode
     em_column: 0
-    em_order: 7
+    em_order: 10
 - type: entities
   entities:
   - entity: input_boolean.energy_control_auto_reenable
@@ -437,7 +457,7 @@
     em_width: 8
     em_name: Auto-reenable EM toggle
     em_column: 0
-    em_order: 9
+    em_order: 11
     em_required: true
 - type: conditional
   conditions:
@@ -456,7 +476,7 @@
     em_width: 12
     em_name: Auto-reenable Timer
     em_column: 0
-    em_order: 10
+    em_order: 12
     em_required: true
 - type: conditional
   conditions:
@@ -572,7 +592,7 @@
     em_width: 12
     em_name: Future Decisions
     em_column: 0
-    em_order: 11
+    em_order: 14
 - type: conditional
   conditions:
   - entity: input_select.electricity_provider
@@ -2060,7 +2080,7 @@
     em_width: 12
     em_name: System Status
     em_column: 0
-    em_order: 12
+    em_order: 15
     em_hidden: true
 - type: entities
   title: System Information
@@ -2777,18 +2797,6 @@
     em_name: Battery Level Gauge
     em_column: 2
     em_order: 16
-    em_hidden: true
-- type: custom:em-battery-bar-card
-  entity: sensor.inverter_battery_level
-  title: Battery Level
-  segments: 25
-  height: 35
-  view_layout:
-    em_id: battery-bar-card
-    em_width: 12
-    em_name: Battery Level Bar
-    em_column: 2
-    em_order: 17
     em_hidden: true
 - type: custom:config-template-card
   entities:
