@@ -673,47 +673,47 @@
     "new_in_version": "1.2.0"
     },
     {
-    "url": "/local/energy-manager-wholesale-pricing-card.js?v=5",
+    "url": "/local/energy-manager-wholesale-pricing-card.js",
     "type": "module",
     "new_in_version": "2.0.0"
     },
     {
-    "url": "/local/energy-manager-flow-power-pricing-card.js?v=3",
+    "url": "/local/energy-manager-flow-power-pricing-card.js",
     "type": "module",
     "new_in_version": "2.0.0"
     },
     {
-    "url": "/local/energy-manager-globird-pricing-card.js?v=1",
+    "url": "/local/energy-manager-globird-pricing-card.js",
     "type": "module",
     "new_in_version": "2.0.0"
     },
     {
-    "url": "/local/energy-manager-layout.js?v=8.0.0",
+    "url": "/local/energy-manager-layout.js",
     "type": "module",
     "new_in_version": "2.0.0"
     },
     {
-    "url": "/local/cards/em-battery-bar-card.js?v=1",
+    "url": "/local/cards/em-battery-bar-card.js",
     "action": "module",
     "new_in_version": "2.1.0"
     },
     {
-    "url": "/local/cards/em-battery-outlook-card.js?v=1",
+    "url": "/local/cards/em-battery-outlook-card.js",
     "action": "module",
     "new_in_version": "2.1.0"
     },
     {
-    "url": "/local/cards/em-system-limits-card.js?v=1",
+    "url": "/local/cards/em-system-limits-card.js",
     "action": "module",
     "new_in_version": "2.1.0"
     },
     {
-    "url": "/local/cards/em-solar-headroom-card.js?v=2",
+    "url": "/local/cards/em-solar-headroom-card.js",
     "action": "module",
     "new_in_version": "2.1.0"
     },
     {
-    "url": "/local/cards/em-daily-plan-recap-card.js?v=3",
+    "url": "/local/cards/em-daily-plan-recap-card.js",
     "action": "module",
     "new_in_version": "2.1.0"
     },
