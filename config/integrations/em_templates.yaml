@@ -1119,6 +1119,18 @@ template:
               states('sensor.electricity_import_cost_daily_influx') | float(0)
             )
           }}
+      - name: "Grid Energy Net Monthly Cost"
+        unique_id: grid_energy_net_monthly_cost
+        unit_of_measurement: "$"
+        device_class: monetary
+        state: >
+          {{
+            (
+              states('sensor.electricity_export_profit_monthly_influx') | float(0)
+              -
+              states('sensor.electricity_import_cost_monthly_influx') | float(0)
+            )
+          }}
       - name: net_formatted
         state: >
           {% set val = states('sensor.grid_energy_net_daily_cost') %}
@@ -1129,6 +1141,16 @@ template:
             {{ val }}
           {% endif %}
         unique_id: net_formatted
+      - name: net_formatted_monthly
+        state: >
+          {% set val = states('sensor.grid_energy_net_monthly_cost') %}
+          {% if val not in ['unknown', 'unavailable'] %}
+            {% set price = val.replace(' $', '') | float(0) %}
+            {{ '$%.2f' | format(price) }}
+          {% else %}
+            {{ val }}
+          {% endif %}
+        unique_id: net_formatted_monthly
       - name: House Power From PV
         unique_id: house_power_from_pv
         unit_of_measurement: W
