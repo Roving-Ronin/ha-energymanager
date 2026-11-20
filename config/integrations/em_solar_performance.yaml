@@ -1,0 +1,113 @@
+template:
+  - triggers:
+      - trigger: time_pattern
+        minutes: "/5"
+        seconds: "0"
+    variables:
+      forecast_entity: sensor.solcast_pv_forecast_forecast_today
+      pv_total_entity: sensor.pv_energy_total
+      plan_entity: sensor.energy_manager_plan
+      # Optional binary sensors. 'on' means curtailed or offline, respectively.
+      # With no curtailment sensor, use Energy Manager's current curtailment flag.
+      curtailment_entity: input_boolean.curtailing_active
+      inverter_offline_entity: null
+      # Local time on a five-minute boundary.
+      snapshot_time: "03:55:00"
+    sensor:
+      - name: EM Solar Performance
+        default_entity_id: sensor.em_solar_performance
+        unique_id: em_solar_performance
+        state: "{{ now().date().isoformat() }}"
+        attributes:
+          comparison: >-
+            {% set old = this.attributes.get('comparison') if this is defined and this else none %}
+            {% set old = old if old is mapping else {} %}
+            {% set previous = old.get('active') %}
+            {% set history = old.get('days', []) %}
+            {% set time = now().replace(second=0, microsecond=0) %}
+            {% set ts = as_timestamp(time) %}
+            {% set date = time.date().isoformat() %}
+            {% set yesterday = (time - timedelta(days=1)).date().isoformat() %}
+            {% set midnight = time.hour == 0 and time.minute == 0 %}
+            {% set daylight_state = states('sun.sun') %}
+            {% set daylight = daylight_state == 'above_horizon' %}
+
+            {% set meter_unit = state_attr(pv_total_entity, 'unit_of_measurement') %}
+            {% set raw_meter = states(pv_total_entity) %}
+            {% set meter = raw_meter | float(none) if is_number(raw_meter) else none %}
+            {% set meter = meter / (1000 if meter_unit == 'Wh' else 1)
+                if meter is not none and meter >= 0 and meter_unit in ['kWh', 'Wh'] else none %}
+
+            {% if previous is not mapping or previous.get('date') != date %}
+              {% if previous is mapping %}
+                {% set close_ok = midnight and previous.date == yesterday and 0 < ts - previous.last_sample <= 360 %}
+                {% set complete = close_ok and meter is not none and previous.last_meter is not none
+                    and previous.opening_meter is not none and meter >= previous.last_meter
+                    and meter >= previous.opening_meter and 'meter_gap' not in previous.flags
+                    and 'meter_reset' not in previous.flags %}
+                {% set flags = previous.flags %}
+                {% if not complete and 'meter_gap' not in flags and 'meter_reset' not in flags %}
+                  {% set flags = flags + ['meter_gap'] %}
+                {% endif %}
+                {% if previous.forecast is none %}
+                  {% set flags = flags + ['forecast_missing'] %}
+                {% elif previous.forecast == 0 %}
+                  {% set flags = flags + ['forecast_zero'] %}
+                {% endif %}
+                {% set history = (history + [dict(date=previous.date, forecast_kwh=previous.forecast,
+                    actual_kwh=(meter - previous.opening_meter) if complete else none,
+                    flags=flags, downtime_checked=previous.downtime_checked)])[-30:] %}
+              {% endif %}
+              {% set previous = dict(date=date, opening_meter=meter if midnight else none,
+                  last_meter=meter, last_sample=ts, forecast=none,
+                  flags=[] if midnight and meter is not none else ['meter_gap'],
+                  downtime_checked=inverter_offline_entity is string and inverter_offline_entity != '') %}
+            {% endif %}
+
+            {% set forecast = previous.forecast %}
+            {% if forecast is none and ts == as_timestamp(today_at(snapshot_time)) %}
+              {% set value = states(forecast_entity) %}
+              {% set unit = state_attr(forecast_entity, 'unit_of_measurement') %}
+              {% if is_number(value) and value | float >= 0 and unit in ['kWh', 'Wh'] %}
+                {% set forecast = value | float / (1000 if unit == 'Wh' else 1) %}
+              {% endif %}
+            {% endif %}
+
+            {% set quality = namespace(flags=previous.flags) %}
+            {% if meter is none or ts - previous.last_sample > 360 %}
+              {% set quality.flags = quality.flags + ['meter_gap'] %}
+            {% elif previous.last_meter is not none and meter < previous.last_meter %}
+              {% set quality.flags = quality.flags + ['meter_reset'] %}
+            {% endif %}
+            {% if daylight_state not in ['above_horizon', 'below_horizon'] %}
+              {% set quality.flags = quality.flags + ['daylight_unknown'] %}
+            {% elif daylight %}
+              {% if curtailment_entity is string and curtailment_entity != '' %}
+                {% set curtail = states(curtailment_entity) %}
+              {% else %}
+                {% set summary = state_attr(plan_entity, 'blocks_summary') %}
+                {% set plan = state_attr(plan_entity, 'energy_plan') %}
+                {% set updated = as_timestamp(summary.get('ts') or plan.get('meta', {}).get('generated_at'), none)
+                    if summary is mapping and plan is mapping else none %}
+                {% set active = summary.get('curtail_active') if updated is not none and -60 <= ts - updated <= 900
+                    and has_value(plan_entity) else none %}
+                {% set curtail = 'on' if active is sameas true else 'off' if active is sameas false else 'unknown' %}
+              {% endif %}
+              {% if curtail == 'on' %}
+                {% set quality.flags = quality.flags + ['curtailed'] %}
+              {% elif curtail != 'off' %}
+                {% set quality.flags = quality.flags + ['curtailment_unknown'] %}
+              {% endif %}
+              {% if previous.downtime_checked %}
+                {% set offline = states(inverter_offline_entity) %}
+                {% if offline == 'on' %}
+                  {% set quality.flags = quality.flags + ['downtime'] %}
+                {% elif offline != 'off' %}
+                  {% set quality.flags = quality.flags + ['downtime_unknown'] %}
+                {% endif %}
+              {% endif %}
+            {% endif %}
+
+            {{ dict(days=history, snapshot_time=snapshot_time,
+                active=dict(previous, forecast=forecast, last_meter=meter,
+                    last_sample=ts, flags=quality.flags | unique | list)) }}
