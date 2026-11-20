@@ -205,7 +205,7 @@
       "action": "replace",
       "description": "Shared Overview and Inverter card catalogue",
       "backup_current": true,
-      "new_in_version": "2.0.1"
+      "new_in_version": "2.1.0"
     },
     "dashboards/energy_manager_ev.yaml": {
       "action": "replace",
@@ -247,13 +247,19 @@
       "action": "replace",
       "description": "Energy Level Bar Card",
       "backup_current": true,
-      "new_in_version": "2.0.1"
-    },  
+      "new_in_version": "2.1.0"
+    },
+    "www/cards/em-battery-outlook-card.js": {
+      "action": "replace",
+      "description": "Battery Outlook Card",
+      "backup_current": true,
+      "new_in_version": "2.1.0"
+    },
     "www/cards/bom-radar-card.js": {
       "action": "replace",
       "description": "BOM Radar Card",
       "backup_current": true,
-      "new_in_version": "2.0.1"
+      "new_in_version": "2.1.0"
     },   
     "www/addon-iframe-card.js": {
       "action": "replace",
@@ -600,7 +606,7 @@
     "custom_components/em_dashboard_layout/tabs.py": {
       "action": "replace",
       "description": "Per-user Energy Manager dashboard tab storage",
-      "new_in_version": "2.0.1"
+      "new_in_version": "2.1.0"
     },
     "custom_components/em_dashboard_layout/manifest.json": {
       "action": "replace",
@@ -666,12 +672,17 @@
     {
     "url": "/local/cards/em-battery-bar-card.js",
     "action": "module",
-    "new_in_version": "2.0.1"
+    "new_in_version": "2.1.0"
+    },
+    {
+    "url": "/local/cards/em-battery-outlook-card.js",
+    "action": "module",
+    "new_in_version": "2.1.0"
     },
     {
     "url": "/local/cards/bom-radar-card.js",
     "action": "module",
-    "new_in_version": "2.0.1"
+    "new_in_version": "2.1.0"
     },
     {
     "url": "/local/em-events-card.js",
