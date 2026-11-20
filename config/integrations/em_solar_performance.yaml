@@ -12,7 +12,7 @@ template:
       curtailment_entity: null # input_boolean.curtailing_active
       inverter_offline_entity: null
       # Local time on a five-minute boundary.
-      snapshot_time: "04:05:00"
+      snapshot_time: "04:10:00"
     sensor:
       - name: EM Solar Performance
         default_entity_id: sensor.em_solar_performance
