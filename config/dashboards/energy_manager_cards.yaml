@@ -2102,6 +2102,15 @@
     em_column: 0
     em_order: 17
     em_hidden: true
+- type: custom:custom:em-daily-plan-recap-card
+  title: Daily Plan Recap
+  view_layout:
+    em_id: em-daily-plan-recap
+    em_name: Daily Plan Recap
+    em_width: 12
+    em_column: 0
+    em_order: 18
+    em_hidden: true
 - type: entities
   title: System Information
   entities:
