@@ -16,6 +16,7 @@
 * System Limits card
 * Solar Headroom card
 * Daily Plan Recap card
+* Solar Performance card
 * BOM Rain Radar as new card in dashboard, hidden by default
 * BatteryLedger added from Roving-Ronin/BatteryLedger
 * Support for custom Marketplace repositories
