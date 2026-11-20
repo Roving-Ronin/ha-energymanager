@@ -2111,6 +2111,15 @@
     em_column: 0
     em_order: 18
     em_hidden: true
+- type: custom:em-solar-performance-card
+  title: Solar Performance
+  view_layout:
+    em_id: em-solar-performance
+    em_name: Solar Performance
+    em_width: 12
+    em_column: 0
+    em_order: 19
+    em_hidden: true
 - type: entities
   title: System Information
   entities:
