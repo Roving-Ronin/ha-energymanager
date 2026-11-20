@@ -120,7 +120,7 @@ class EmDailyPlanRecapCard extends HTMLElement {
 
   static getStubConfig() { return { entity: recapEntity }; }
 
-  setConfig(config) {
+  setConfig(config = {}) {
     this._config = { entity: config.entity ?? recapEntity, name: config.name ?? "Daily Plan Recap" };
     this._render();
   }
@@ -130,8 +130,8 @@ class EmDailyPlanRecapCard extends HTMLElement {
     this._hass = hass;
     if (!this._config) return;
     const { entity } = this._config;
-    if (!previous || previous.states[entity] !== hass.states[entity] ||
-        previous.language !== hass.language || previous.config?.time_zone !== hass.config?.time_zone) {
+    if (!previous || previous.states?.[entity] !== hass?.states?.[entity] ||
+        previous.language !== hass?.language || previous.config?.time_zone !== hass?.config?.time_zone) {
       this._render();
     }
   }
@@ -145,7 +145,7 @@ class EmDailyPlanRecapCard extends HTMLElement {
     const { entity, name } = this._config;
     const get = (id) => this.shadowRoot.getElementById(id);
     const set = (id, value) => { get(id).textContent = value; };
-    const state = this._hass?.states[entity];
+    const state = this._hass?.states?.[entity];
     const capture = state?.attributes?.capture;
     const record = capture?.latest;
     set("title", name);
