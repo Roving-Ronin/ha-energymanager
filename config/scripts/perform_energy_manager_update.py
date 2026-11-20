@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Perform Energy Manager Update v2.0.0 - Github branch updater
+Perform Energy Manager Update v2.1.0 - Github branch updater
 """
 import sys
 import os
