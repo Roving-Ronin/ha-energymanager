@@ -2093,7 +2093,7 @@
     em_column: 0
     em_order: 16
     em_hidden: true
-- type: custom:custom:em-solar-headroom-card
+- type: custom:em-solar-headroom-card
   title: Solar Headroom
   view_layout:
     em_id: em-solar-headroom
@@ -2102,7 +2102,7 @@
     em_column: 0
     em_order: 17
     em_hidden: true
-- type: custom:custom:em-daily-plan-recap-card
+- type: custom:em-daily-plan-recap-card
   title: Daily Plan Recap
   view_layout:
     em_id: em-daily-plan-recap
