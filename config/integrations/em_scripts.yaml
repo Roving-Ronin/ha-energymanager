@@ -114,6 +114,9 @@ script:
               - action: input_boolean.turn_off
                 target:
                   entity_id: input_boolean.restart_required
+              - delay: "00:00:01"
+              - action: shell_command.switch_to_foxess
+              - delay: "00:00:01"
               - action: persistent_notification.create
                 data:
                   title: "FoxESS Cloud Integration Activation"
