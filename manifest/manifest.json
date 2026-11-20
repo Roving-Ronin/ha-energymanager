@@ -272,6 +272,12 @@
       "backup_current": true,
       "new_in_version": "2.1.0"
     },
+    "www/cards/em-daily-plan-recap-card.js": {
+      "action": "replace",
+      "description": "Daily Plan Recap Card",
+      "backup_current": true,
+      "new_in_version": "2.1.0"
+    },
     "www/cards/bom-radar-card.js": {
       "action": "replace",
       "description": "BOM Radar Card",
@@ -705,7 +711,12 @@
     "url": "/local/cards/em-solar-headroom-card.js",
     "action": "module",
     "new_in_version": "2.1.0"
-    },  
+    },
+    {
+    "url": "/local/cards/em-daily-plan-recap-card.js",
+    "action": "module",
+    "new_in_version": "2.1.0"
+    },
     {
     "url": "/local/cards/bom-radar-card.js",
     "action": "module",
