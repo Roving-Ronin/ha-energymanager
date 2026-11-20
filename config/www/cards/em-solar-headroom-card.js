@@ -146,10 +146,19 @@ class EmSolarHeadroomCard extends HTMLElement {
           padding: 6px 8px;
         }
         input:focus-visible { outline: 2px solid var(--primary-color, #007f79); outline-offset: 1px; }
+        #result {
+          --coverage-color: #d97706;
+          --coverage-track: var(--divider-color, #8885);
+        }
+        #result[data-coverage="full"] { --coverage-color: #eab308; }
+        #result[data-coverage="none"] {
+          --coverage-color: #dc2626;
+          --coverage-track: var(--coverage-color);
+        }
         .window {
           border-radius: 8px;
-          border-left: 3px solid var(--headroom-accent);
-          background: color-mix(in srgb, var(--headroom-accent) 9%, transparent);
+          border-left: 3px solid var(--coverage-color);
+          background: color-mix(in srgb, var(--coverage-color) 9%, transparent);
           padding: 8px 10px;
           margin-bottom: 8px;
         }
@@ -162,7 +171,20 @@ class EmSolarHeadroomCard extends HTMLElement {
         }
         .metric strong { display: block; font-size: 17px; font-variant-numeric: tabular-nums; }
         .metric span { display: block; margin-top: 3px; }
-        progress { display: block; width: 100%; height: 6px; margin: 8px 0; accent-color: var(--headroom-accent); }
+        progress {
+          display: block;
+          width: 100%;
+          height: 6px;
+          margin: 8px 0;
+          appearance: none;
+          border: 0;
+          border-radius: 3px;
+          overflow: hidden;
+          background: var(--coverage-track);
+        }
+        progress::-webkit-progress-bar { background: var(--coverage-track); }
+        progress::-webkit-progress-value { background: var(--coverage-color); }
+        progress::-moz-progress-bar { background: var(--coverage-color); }
         #note { margin-top: 8px; }
         @container (max-width: 225px) { .metric strong { font-size: 14px; } }
       </style>
@@ -291,10 +313,7 @@ class EmSolarHeadroomCard extends HTMLElement {
       showStatus("The forecast doesn’t contain a continuous window this long.");
       return;
     }
-    if (best.covered <= energyTolerance) {
-      showStatus("No solar headroom forecast for this run time.");
-      return;
-    }
+    const hasSolar = best.covered > energyTolerance;
 
     const locale = this._hass.language || undefined;
     const timeZone = this._hass.config?.time_zone;
@@ -316,9 +335,12 @@ class EmSolarHeadroomCard extends HTMLElement {
     const currency = new Intl.NumberFormat(locale, { style: "currency", currency: "AUD", currencyDisplay: "narrowSymbol" });
 
     get("status").hidden = true;
-    get("result").hidden = false;
-    set("result-label", best.fullSolar ? "Best time to run on solar" : "Best partial-solar window");
-    set("window", startLabel + ", " + from + " – " + endLabel);
+    const result = get("result");
+    result.hidden = false;
+    result.dataset.coverage = !hasSolar ? "none" : best.fullSolar ? "full" : "partial";
+    set("result-label", !hasSolar ? "Solar coverage" :
+      best.fullSolar ? "Best time to run on solar" : "Best partial-solar window");
+    set("window", hasSolar ? startLabel + ", " + from + " – " + endLabel : "No excess solar forecast");
     set("coverage", percentage.format(displayedFraction));
     set("energy", energy.format(best.covered) + " of " + energy.format(best.required) + " kWh from solar");
     get("bar").value = fraction;
@@ -326,9 +348,13 @@ class EmSolarHeadroomCard extends HTMLElement {
     set("money", cents === null ? "—" : currency.format(Math.abs(amount)));
     const tradeOff = amount > 0 ? "Feed-in credit forgone" : "Export charges avoided";
     set("money-label", cents === null ? "Feed-in price unavailable" : cents ? tradeOff : "Feed-in impact");
-    set("note", best.fullSolar
-      ? "Uses forecast surplus after house demand, EV and battery charging."
-      : "No full-solar window found. The remaining load may draw from the battery or grid.");
+    if (!hasSolar) {
+      set("note", "This load would rely on the battery or grid.");
+    } else {
+      set("note", best.fullSolar
+        ? "Uses forecast surplus after house demand, EV and battery charging."
+        : "No full-solar window found. The remaining load may draw from the battery or grid.");
+    }
   }
 }
 
