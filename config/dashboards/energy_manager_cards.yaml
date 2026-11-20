@@ -820,7 +820,7 @@
     em_order: 8
 - type: custom:entity-progress-card
   entity: sensor.inverter_battery_charge
-  name: Battery Charge
+  name: Battery Stored Energy
   decimal: 1
   value_compact: false
   value_sign: false
@@ -849,36 +849,6 @@
     em_column: 1
     em_order: 9
 - type: custom:entity-progress-card
-  entity: sensor.inverter_daily_battery_discharge
-  decimal: 1
-  value_compact: false
-  value_sign: false
-  max_value:
-    jinja: "{{ states('input_number.battery_capacity') }}"
-  bar_scale: linear
-  bar_color: orange
-  force_circular_background: false
-  bar_orientation: ltr
-  bar_effect: []
-  hide: []
-  alert_when:
-    highlight: background
-  frameless: false
-  marginless: false
-  name: Battery Discharge
-  icon: mdi:battery-arrow-down
-  card_mod:
-    style: |
-      ha-state-icon {
-        color: orange;
-      }
-  view_layout:
-    em_id: battery-discharge
-    em_width: 6
-    em_name: Battery Discharge
-    em_column: 1
-    em_order: 10
-- type: custom:entity-progress-card
   entity: sensor.daily_battery_charge
   decimal: 1
   value_compact: false
@@ -894,7 +864,7 @@
   frameless: false
   marginless: false
   icon: mdi:battery-arrow-up
-  name: Total Charge
+  name: Daily Charge
   max_value:
     jinja: "{{ states('input_number.battery_capacity') }}"
   card_mod:
@@ -905,9 +875,9 @@
   view_layout:
     em_id: total-charge
     em_width: 6
-    em_name: Total Charge
+    em_name: Daily Charge
     em_column: 1
-    em_order: 11
+    em_order: 10
 - type: custom:entity-progress-card
   entity: sensor.daily_battery_discharge
   decimal: 1
@@ -924,7 +894,7 @@
   frameless: false
   marginless: false
   icon: mdi:battery-arrow-down
-  name: Total Discharge
+  name: Daily Discharge
   max_value:
     jinja: "{{ states('input_number.battery_capacity') }}"
   card_mod:
@@ -937,7 +907,7 @@
     em_width: 6
     em_name: Total Discharge
     em_column: 1
-    em_order: 12
+    em_order: 11
 - type: custom:entity-progress-card
   entity: sensor.daily_daytime_consumption
   decimal: 1
@@ -967,7 +937,7 @@
     em_width: 6
     em_name: Daytime Consumption
     em_column: 1
-    em_order: 13
+    em_order: 12
 - type: custom:entity-progress-card
   entity: sensor.overnight_consumption
   decimal: 1
@@ -997,7 +967,7 @@
     em_width: 6
     em_name: Night Consumption
     em_column: 1
-    em_order: 14
+    em_order: 13
 - type: custom:entity-progress-card
   entity: sensor.daily_house_energy_from_pv
   decimal: 1
@@ -1026,7 +996,7 @@
     em_width: 6
     em_name: Consumed from PV
     em_column: 1
-    em_order: 15
+    em_order: 14
 - type: custom:entity-progress-card
   entity: sensor.daily_house_energy_from_battery
   decimal: 1
@@ -1055,7 +1025,7 @@
     em_width: 6
     em_name: Consumed from Battery
     em_column: 1
-    em_order: 16
+    em_order: 15
 - type: custom:entity-progress-card
   entity: sensor.daily_house_energy_from_grid
   decimal: 1
@@ -1085,7 +1055,7 @@
     em_width: 6
     em_name: Consumed from Grid
     em_column: 1
-    em_order: 17
+    em_order: 16
 - type: custom:apexcharts-card
   graph_span: 12h
   update_interval: 5min
@@ -1266,7 +1236,7 @@
     em_width: 12
     em_name: Inverter - Last 12 Hours
     em_column: 1
-    em_order: 18
+    em_order: 17
 - type: custom:apexcharts-card
   header:
     show: true
@@ -1299,7 +1269,7 @@
     em_width: 12
     em_name: Current Power Profile
     em_column: 1
-    em_order: 19
+    em_order: 18
 - type: custom:energy-flow-card
   image: /local/energy-flow-house.png
   animation_speed: 1
@@ -2679,7 +2649,7 @@
     em_width: 12
     em_name: Weather Today
     em_column: 1
-    em_order: 20
+    em_order: 19
     em_hidden: true
 - daily_forecast_days: 4
   daily_forecast_layout: vertical
@@ -2749,7 +2719,7 @@
     em_width: 12
     em_name: Weather Four Day Forecast
     em_column: 1
-    em_order: 21
+    em_order: 20
     em_hidden: true
 - type: custom:modern-circular-gauge
   entity: sensor.inverter_battery_level
