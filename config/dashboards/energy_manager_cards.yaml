@@ -2082,6 +2082,17 @@
     em_column: 0
     em_order: 15
     em_hidden: true
+- type: custom:em-system-limits-card
+  soc_entity: sensor.inverter_battery_level
+  grid_export_entity: sensor.inverter_export_power
+  view_layout:
+    em_id: em-system-limimts
+    em_name: System Limits
+    em_width: 12
+    em_column: 0
+    em_order: 16
+    em_hidden: true
+  title: Battery Outlook
 - type: entities
   title: System Information
   entities:
