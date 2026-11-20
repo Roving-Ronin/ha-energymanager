@@ -12,6 +12,7 @@ shell_command:
   switch_to_alphaess: cp /config/alphaess_modbus.yaml.disabled /config/modbus/modbus.yaml
   switch_to_goodwe: cp /config/goodwe_modbus.yaml.disabled /config/modbus/modbus.yaml
   switch_to_goodwe_et: cp /config/goodwe_modbus.yaml.disabled /config/modbus/modbus.yaml
+  switch_to_foxess: cp /config/foxess_modbus.yaml.disabled /config/modbus/modbus.yaml
   switch_to_fronius: cp /config/fronius_modbus.yaml.disabled /config/modbus/modbus.yaml
   switch_to_solaredge: cp /config/solaredge_modbus.yaml.disabled /config/modbus/modbus.yaml
   list_modbus_files: ls -la /config/*modbus* > /config/modbus_files_list.txt
