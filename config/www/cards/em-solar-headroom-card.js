@@ -203,7 +203,7 @@ class EmSolarHeadroomCard extends HTMLElement {
     return { entity: defaultEntity };
   }
 
-  setConfig(config) {
+  setConfig(config = {}) {
     const power = finite(config.default_power_kw ?? 2);
     const duration = finite(config.default_duration_minutes ?? 120);
     const maxAge = finite(config.max_plan_age_minutes ?? 20);
@@ -228,9 +228,9 @@ class EmSolarHeadroomCard extends HTMLElement {
     this._hass = hass;
     if (!this._config) return;
     const entity = this._config.entity;
-    if (!previous || previous.language !== hass.language ||
-        previous.config?.time_zone !== hass.config?.time_zone ||
-        previous.states[entity] !== hass.states[entity]) {
+    if (!previous || previous.language !== hass?.language ||
+        previous.config?.time_zone !== hass?.config?.time_zone ||
+        previous.states?.[entity] !== hass?.states?.[entity]) {
       this._render();
     }
   }
@@ -257,7 +257,7 @@ class EmSolarHeadroomCard extends HTMLElement {
     const { entity, name, maxAge } = this._config;
     const get = (id) => this.shadowRoot.getElementById(id);
     const set = (id, value) => { get(id).textContent = value; };
-    const state = this._hass?.states[entity];
+    const state = this._hass?.states?.[entity];
     const plan = state?.attributes?.energy_plan;
     const now = Date.now();
     const generated = Date.parse(plan?.meta?.generated_at ?? plan?.summary?.ts);
