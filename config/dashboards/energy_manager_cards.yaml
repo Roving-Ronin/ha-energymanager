@@ -3075,6 +3075,61 @@
     em_column: 2
     em_order: 19
     em_hidden: true
+- type: conditional
+  conditions:
+  - entity: input_select.electricity_provider
+    state_not: "Flow Power"
+  card:
+    type: markdown
+    content: >
+      ## Net Monthly
+
+      {% set cost = states('sensor.grid_energy_net_monthly_cost') |
+      float(0) %}
+
+      ## {% if cost < 0 -%}-${{ cost | abs | round(2) }}{% else
+      %}${{ cost |  round(2) }}{% endif %}
+    card_mod:
+      style: |
+        ha-markdown {
+          color: {% if states('sensor.grid_energy_net_monthly_cost') | float(0) > 0 %}#43a047{% else %}#e53935{% endif %};
+        }
+  view_layout:
+    em_id: net
+    em_width: 4
+    em_name: Net Cost Monthy
+    em_column: 1
+    em_order: 21
+- type: conditional
+  conditions:
+  - entity: input_select.electricity_provider
+    state_not: "Flow Power"
+  card:
+    type: markdown
+    content: |
+      ## Buy Monthly
+      ## {{ states('sensor.import_formatted_monthly') }}
+  view_layout:
+    em_id: buy_monthly
+    em_width: 4
+    em_name: Monthly Buy
+    em_column: 1
+    em_order: 22
+- type: conditional
+  conditions:
+  - entity: input_select.electricity_provider
+    state_not: "Flow Power"
+  card:
+    type: markdown
+    content: |
+      ## Sell Monthly
+      ## {{ states('sensor.export_formatted_monthly') }}
+  view_layout:
+    em_id: sell_monthly
+    em_width: 4
+    em_name: Monthly Sell
+    em_column: 1
+    em_order: 23   
 - type: entities
   view_layout:
     em_id: inverter-system-information
