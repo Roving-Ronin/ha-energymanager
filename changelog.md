@@ -15,11 +15,13 @@
 * Battery outlook card
 * System Limits card
 * Solar Headroom card
+* Daily Plan Recap card
 * BOM Rain Radar as new card in dashboard, hidden by default
 * BatteryLedger added from Roving-Ronin/BatteryLedger
 * Support for custom Marketplace repositories
 * Two new entities to track system purchase cost
 * Extra entity to track second purchase date
+* Net_monthly cost and profit entities
 #### Changed
 * Removed Goodwe firmware update from being queried as it is not consistently supported over model type
 * Moved Update Available markdown card to be directly under Update Result entity card
