@@ -173,7 +173,7 @@ class EmSolarHeadroomCard extends HTMLElement {
         </header>
         <div class="controls">
           <label>Appliance power (kW)
-            <input id="power" type="number" min="0.1" step="any" inputmode="decimal" required>
+            <input id="power" type="number" min="0.1" step="0.1" inputmode="decimal" required>
           </label>
           <label>Run time (minutes)
             <input id="duration" type="number" min="1" step="1" inputmode="numeric" required>
