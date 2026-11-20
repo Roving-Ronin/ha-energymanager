@@ -693,27 +693,27 @@
     "new_in_version": "2.0.0"
     },
     {
-    "url": "/local/cards/em-battery-bar-card.js",
+    "url": "/local/cards/em-battery-bar-card.js?v=1",
     "action": "module",
     "new_in_version": "2.1.0"
     },
     {
-    "url": "/local/cards/em-battery-outlook-card.js",
+    "url": "/local/cards/em-battery-outlook-card.js?v=1",
     "action": "module",
     "new_in_version": "2.1.0"
     },
     {
-    "url": "/local/cards/em-system-limits-card.js",
+    "url": "/local/cards/em-system-limits-card.js?v=1",
     "action": "module",
     "new_in_version": "2.1.0"
     },
     {
-    "url": "/local/cards/em-solar-headroom-card.js",
+    "url": "/local/cards/em-solar-headroom-card.js?v=2",
     "action": "module",
     "new_in_version": "2.1.0"
     },
     {
-    "url": "/local/cards/em-daily-plan-recap-card.js",
+    "url": "/local/cards/em-daily-plan-recap-card.js?v=3",
     "action": "module",
     "new_in_version": "2.1.0"
     },
