@@ -255,6 +255,12 @@
       "backup_current": true,
       "new_in_version": "2.1.0"
     },
+    "www/cards/em-system-limits-card.js": {
+      "action": "replace",
+      "description": "System Limits Card",
+      "backup_current": true,
+      "new_in_version": "2.1.0"
+    }, 
     "www/cards/bom-radar-card.js": {
       "action": "replace",
       "description": "BOM Radar Card",
@@ -676,6 +682,11 @@
     },
     {
     "url": "/local/cards/em-battery-outlook-card.js",
+    "action": "module",
+    "new_in_version": "2.1.0"
+    },
+    {
+    "url": "/local/cards/em-system-limits-card.js",
     "action": "module",
     "new_in_version": "2.1.0"
     },
