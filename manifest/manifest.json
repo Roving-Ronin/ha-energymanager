@@ -111,6 +111,11 @@
       "new_in_version": "2.0.0",
       "description": "MQTT sensors"
     },
+    "integrations/em_daily_plan_recap.yaml": {
+      "action": "create",
+      "new_in_version": "2.1.0",
+      "description": "Daily Plan Recap"
+    },
     "sungrow_modbus.yaml.disabled": {
       "action": "replace",
       "description": "Sungrow modbus configuration",
