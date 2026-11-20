@@ -2837,7 +2837,7 @@
     type: custom:apexcharts-card
     header:
       show: true
-      title: House Energy Sources
+      title: Consumption Sources
       show_states: false
     graph_span: 24h
     span:
