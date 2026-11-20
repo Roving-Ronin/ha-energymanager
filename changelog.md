@@ -12,6 +12,7 @@
 * Marketplace Config-template-card, used for Energy Consumption Card on dashboard
 * Energy Consumption Card as new card in dashboard, hidden by default
 * Battery Level Bar as new card in dashboard, hidden by default
+* Battery outlook card
 * BOM Rain Radar as new card in dashboard, hidden by default
 * BatteryLedger added from Roving-Ronin/BatteryLedger
 * Support for custom Marketplace repositories
