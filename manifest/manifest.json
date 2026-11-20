@@ -116,6 +116,11 @@
       "new_in_version": "2.1.0",
       "description": "Daily Plan Recap"
     },
+    "integrations/em_solar_performance.yaml": {
+      "action": "create",
+      "new_in_version": "2.1.0",
+      "description": "Solar Performace"
+    },  
     "sungrow_modbus.yaml.disabled": {
       "action": "replace",
       "description": "Sungrow modbus configuration",
@@ -275,6 +280,12 @@
     "www/cards/em-daily-plan-recap-card.js": {
       "action": "replace",
       "description": "Daily Plan Recap Card",
+      "backup_current": true,
+      "new_in_version": "2.1.0"
+    },
+    "www/cards/em-solar-performance-card.js": {
+      "action": "replace",
+      "description": "Solar Performance Card",
       "backup_current": true,
       "new_in_version": "2.1.0"
     },
@@ -714,6 +725,11 @@
     },
     {
     "url": "/local/cards/em-daily-plan-recap-card.js",
+    "action": "module",
+    "new_in_version": "2.1.0"
+    },
+    {
+    "url": "/local/cards/em-solar-performance-card.js",
     "action": "module",
     "new_in_version": "2.1.0"
     },
