@@ -6,8 +6,8 @@ template:
       plan_entity: sensor.energy_manager_plan
       export_entity: sensor.exported_energy_total
       soc_entity: sensor.inverter_battery_level
-      window_start: "17:30:00"
-      window_end: "19:30:00"
+      window_start: "00:00:00"
+      window_end: "23:59:00"
       # Optional percentages.
       target_soc_pct: input_number.inverter_max_soc
       reserve_soc_pct: sensor.inverter_min_soc
