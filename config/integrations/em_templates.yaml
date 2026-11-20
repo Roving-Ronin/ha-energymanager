@@ -1107,6 +1107,26 @@ template:
             {{ val }}
           {% endif %}
         unique_id: export_formatted
+      - name: import_formatted_monthly
+        state: >
+          {% set val = states('sensor.electricity_import_cost_monthly_influx') %}
+          {% if val not in ['unknown', 'unavailable'] %}
+            {% set price = val.replace(' $', '') | float(0) %}
+            {{ '$%.2f' | format(price) }}
+          {% else %}
+            {{ val }}
+          {% endif %}
+        unique_id: import_formatted_monthly
+      - name: export_formatted_monthly
+        state: >
+          {% set val = states('sensor.electricity_export_profit_monthly_influx') %}
+          {% if val not in ['unknown', 'unavailable'] %}
+            {% set price = val.replace(' $', '') | float(0) %}
+            {{ '$%.2f' | format(price) }}
+          {% else %}
+            {{ val }}
+          {% endif %}
+        unique_id: export_formatted_monthly
       - name: "Grid Energy Net Daily Cost"
         unique_id: grid_energy_net_daily_cost
         unit_of_measurement: "$"
